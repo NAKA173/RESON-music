@@ -15,6 +15,8 @@ export default function UploadPage() {
   const [progress, setProgress] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [statusMsg, setStatusMsg] = useState('')
+  const [aiWarning, setAiWarning] = useState('')
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -77,6 +79,7 @@ export default function UploadPage() {
     }
 
     setProgress(10)
+    setStatusMsg('ファイルをアップロード中…')
 
     // Step 2: R2 に直接 PUT（署名付きURL経由）
     const putRes = await fetch(meta.upload_url, {
@@ -90,9 +93,38 @@ export default function UploadPage() {
       return
     }
 
+    setProgress(60)
+    setStatusMsg('重複チェック中…')
+
+    // Step 3: AI生成チェック（メタデータパターン検出）
+    const aiRes = await fetch('/api/tracks/ai-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ track_id: meta.track_id, self_declared: aiGenerated }),
+    })
+    const aiData = await aiRes.json()
+    if (aiData.ai_generated && aiData.reason === 'metadata_pattern') {
+      setAiWarning(aiData.message)
+    }
+
+    setProgress(80)
+
+    // Step 4: フィンガープリント送信（ブラウザ側で生成できる場合のみ）
+    // fpcalc WASM は別途統合。現時点ではスキップしてサーバー側は受け入れ準備済み。
+    // フィンガープリントが取得できた場合は以下を呼び出す：
+    // await fetch('/api/tracks/fingerprint', { method: 'POST', ... })
+
     setProgress(100)
+    setStatusMsg('')
     setLoading(false)
-    router.push('/dashboard')
+
+    if (!aiData.ai_generated || aiData.reason === 'self_declared') {
+      router.push('/dashboard')
+    }
+    // AI検出された場合は確認ダイアログを表示してから遷移
+    if (aiData.ai_generated && aiData.reason === 'metadata_pattern') {
+      setTimeout(() => router.push('/dashboard'), 3000)
+    }
   }
 
   return (
@@ -106,6 +138,12 @@ export default function UploadPage() {
         {error && (
           <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
             {error}
+          </p>
+        )}
+
+        {aiWarning && (
+          <p className="text-sm text-yellow-400 bg-yellow-900/20 border border-yellow-800 rounded-lg px-4 py-3">
+            ⚠️ {aiWarning}
           </p>
         )}
 
@@ -166,11 +204,14 @@ export default function UploadPage() {
 
           {/* プログレスバー */}
           {progress !== null && (
-            <div className="w-full bg-zinc-800 rounded-full h-2">
-              <div
-                className="bg-white h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
+            <div className="space-y-1.5">
+              <div className="w-full bg-zinc-800 rounded-full h-2">
+                <div
+                  className="bg-white h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              {statusMsg && <p className="text-xs text-zinc-500">{statusMsg}</p>}
             </div>
           )}
 
