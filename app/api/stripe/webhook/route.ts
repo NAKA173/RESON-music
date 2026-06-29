@@ -37,6 +37,11 @@ export async function POST(req: NextRequest) {
       await handleSubscriptionDeleted(supabase, sub)
       break
     }
+    case 'payment_intent.succeeded': {
+      const pi = event.data.object as Stripe.PaymentIntent
+      await handleTipSucceeded(supabase, pi)
+      break
+    }
     default:
       // 未処理イベントは無視（200を返して再送させない）
       break
@@ -88,4 +93,27 @@ async function handleSubscriptionDeleted(
     .from('users')
     .update({ plan: 'free' })
     .eq('id', userId)
+}
+
+async function handleTipSucceeded(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  pi: Stripe.PaymentIntent
+) {
+  const { track_id, user_id, net_yen } = pi.metadata ?? {}
+  if (!track_id || !user_id || !net_yen) return
+
+  // 冪等: payment_id で重複チェック
+  const { data: existing } = await supabase
+    .from('supports')
+    .select('id')
+    .eq('payment_id', pi.id)
+    .single()
+  if (existing) return
+
+  await supabase.from('supports').insert({
+    track_id,
+    user_id,
+    amount_yen: Number(net_yen),
+    payment_id: pi.id,
+  })
 }

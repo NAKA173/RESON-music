@@ -1,0 +1,216 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
+interface Distribution {
+  year_month: string
+  distribution_yen: number
+  tips_yen: number
+  score_breakdown: {
+    play_time_score: number
+    support_rate: number
+    completion_rate: number
+  }
+}
+
+interface Track {
+  id: string
+  title: string
+  cumulative_plays: number
+  in_distribution: boolean
+  ai_generated: boolean
+}
+
+interface ReportData {
+  artist: { id: string; name: string }
+  balance: { balance_yen: number; dormant: boolean }
+  distributions: Distribution[]
+  tracks: Track[]
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState<ReportData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/artist/report')
+      .then((r) => r.json())
+      .then((d) => { setData(d); setLoading(false) })
+  }, [])
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-zinc-500">読み込み中…</p>
+      </main>
+    )
+  }
+
+  if (!data || !data.artist) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-zinc-400">アーティスト登録が必要です</p>
+          <Link href="/register" className="text-white underline">登録する</Link>
+        </div>
+      </main>
+    )
+  }
+
+  const latest = data.distributions[0]
+
+  return (
+    <main className="min-h-screen bg-black text-white px-4 py-10">
+      <div className="max-w-2xl mx-auto space-y-8">
+
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{data.artist.name}</h1>
+            <p className="text-sm text-zinc-400">アーティストダッシュボード</p>
+          </div>
+          <Link
+            href="/upload"
+            className="text-sm bg-white text-black px-4 py-2 rounded-lg font-semibold hover:bg-zinc-200 transition"
+          >
+            + アップロード
+          </Link>
+        </div>
+
+        {/* 残高カード */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <p className="text-sm text-zinc-400">未払い残高</p>
+          <p className="text-4xl font-bold mt-1">
+            ¥{Math.floor(data.balance.balance_yen).toLocaleString()}
+          </p>
+          {data.balance.balance_yen >= 1000 ? (
+            <p className="text-xs text-zinc-500 mt-2">毎月末締め・翌月15日払い</p>
+          ) : (
+            <p className="text-xs text-zinc-600 mt-2">出金最低額は¥1,000（翌月へ繰り越し）</p>
+          )}
+          {data.balance.balance_yen >= 50000 && (
+            <p className="text-xs text-yellow-500 mt-2">⚠️ 残高が50,000円を超えています。出金申請を行ってください。</p>
+          )}
+        </div>
+
+        {/* 最新月のスコア内訳 */}
+        {latest && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">{latest.year_month} の熱量スコア</h2>
+              <p className="text-sm text-zinc-400">
+                ¥{Math.floor(latest.distribution_yen).toLocaleString()}
+              </p>
+            </div>
+            <div className="space-y-3">
+              <ScoreBar
+                label="再生時間スコア"
+                value={latest.score_breakdown.play_time_score}
+                weight={0.4}
+                desc="SUM(再生秒 × 重み係数 × 秒数係数) / 3600"
+              />
+              <ScoreBar
+                label="応援率"
+                value={latest.score_breakdown.support_rate * 100}
+                weight={0.35}
+                isPercent
+                desc="応援数 / 有効再生数"
+              />
+              <ScoreBar
+                label="完聴率"
+                value={latest.score_breakdown.completion_rate * 100}
+                weight={0.25}
+                isPercent
+                desc="完聴数 / 有効再生数"
+              />
+            </div>
+            <p className="text-xs text-zinc-600 border-t border-zinc-800 pt-3">
+              投げ銭収益（別計算）: ¥{latest.tips_yen?.toLocaleString() ?? 0}
+            </p>
+          </div>
+        )}
+
+        {/* 月次履歴 */}
+        {data.distributions.length > 1 && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-3">
+            <h2 className="font-semibold">月次分配履歴</h2>
+            {data.distributions.map((d) => (
+              <div key={d.year_month} className="flex justify-between text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
+                <span className="text-zinc-300">{d.year_month}</span>
+                <span>¥{Math.floor(d.distribution_yen).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 楽曲リスト */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-3">
+          <h2 className="font-semibold">楽曲</h2>
+          {data.tracks.length === 0 ? (
+            <p className="text-sm text-zinc-500">まだ楽曲がありません</p>
+          ) : (
+            data.tracks.map((t) => (
+              <div key={t.id} className="flex items-center justify-between text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
+                <div className="min-w-0">
+                  <p className="truncate">{t.title}</p>
+                  <div className="flex gap-2 mt-0.5">
+                    {t.ai_generated && (
+                      <span className="text-xs text-yellow-600">AI生成</span>
+                    )}
+                    {!t.in_distribution && (
+                      <span className="text-xs text-zinc-600">
+                        分配対象外（{t.cumulative_plays}/100再生）
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="text-zinc-400 ml-3 shrink-0">
+                  {t.cumulative_plays.toLocaleString()}再生
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* 計算式の透明性リンク */}
+        <p className="text-center text-xs text-zinc-600">
+          <Link href="/pricing" className="hover:text-zinc-400 underline">
+            分配計算式はこちらで公開しています
+          </Link>
+        </p>
+      </div>
+    </main>
+  )
+}
+
+function ScoreBar({
+  label, value, weight, isPercent = false, desc,
+}: {
+  label: string
+  value: number
+  weight: number
+  isPercent?: boolean
+  desc: string
+}) {
+  const display = isPercent
+    ? `${value.toFixed(1)}%`
+    : value.toFixed(4)
+  const pct = isPercent ? Math.min(value, 100) : Math.min(value * 100, 100)
+
+  return (
+    <div>
+      <div className="flex justify-between text-sm mb-1">
+        <span>
+          {label}
+          <span className="text-zinc-500 ml-1.5 text-xs">× {weight}</span>
+        </span>
+        <span className="text-zinc-300">{display}</span>
+      </div>
+      <div className="w-full bg-zinc-800 rounded-full h-1.5">
+        <div className="bg-white h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-xs text-zinc-600 mt-0.5">{desc}</p>
+    </div>
+  )
+}
