@@ -1,0 +1,91 @@
+import { stripe } from '@/lib/stripe'
+import { createServiceClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import type Stripe from 'stripe'
+
+// Stripe webhook は冪等に実装（同一イベントが複数回届く前提）
+export async function POST(req: NextRequest) {
+  const body = await req.text()
+  const sig = req.headers.get('stripe-signature')
+
+  if (!sig) {
+    return NextResponse.json({ error: 'No signature' }, { status: 400 })
+  }
+
+  let event: Stripe.Event
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+  } catch {
+    return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
+  }
+
+  const supabase = await createServiceClient()
+
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session
+      await handleCheckoutCompleted(supabase, session)
+      break
+    }
+    case 'customer.subscription.updated': {
+      const sub = event.data.object as Stripe.Subscription
+      await handleSubscriptionUpdated(supabase, sub)
+      break
+    }
+    case 'customer.subscription.deleted': {
+      const sub = event.data.object as Stripe.Subscription
+      await handleSubscriptionDeleted(supabase, sub)
+      break
+    }
+    default:
+      // 未処理イベントは無視（200を返して再送させない）
+      break
+  }
+
+  return NextResponse.json({ received: true })
+}
+
+async function handleCheckoutCompleted(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  session: Stripe.Checkout.Session
+) {
+  const userId = session.metadata?.supabase_user_id
+  const plan = session.metadata?.plan
+  if (!userId || !plan) return
+
+  await supabase
+    .from('users')
+    .update({ plan })
+    .eq('id', userId)
+}
+
+async function handleSubscriptionUpdated(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  sub: Stripe.Subscription
+) {
+  const userId = sub.metadata?.supabase_user_id
+  const plan = sub.metadata?.plan
+  if (!userId || !plan) return
+
+  const status = sub.status
+  // active / trialing のみプランを維持。それ以外は free に戻す
+  const newPlan = (status === 'active' || status === 'trialing') ? plan : 'free'
+
+  await supabase
+    .from('users')
+    .update({ plan: newPlan })
+    .eq('id', userId)
+}
+
+async function handleSubscriptionDeleted(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  sub: Stripe.Subscription
+) {
+  const userId = sub.metadata?.supabase_user_id
+  if (!userId) return
+
+  await supabase
+    .from('users')
+    .update({ plan: 'free' })
+    .eq('id', userId)
+}
