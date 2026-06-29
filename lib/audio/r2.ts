@@ -1,0 +1,50 @@
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+
+export const r2 = new S3Client({
+  region: 'auto',
+  endpoint: process.env.CLOUDFLARE_R2_ENDPOINT!,
+  credentials: {
+    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY!,
+    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_KEY!,
+  },
+})
+
+const BUCKET = process.env.CLOUDFLARE_R2_BUCKET!
+
+export function buildR2Key(artistId: string, trackId: string, ext: string) {
+  return `tracks/${artistId}/${trackId}.${ext}`
+}
+
+/** アップロード用署名付きURL（5分有効） */
+export async function getUploadUrl(key: string, contentType: string) {
+  const cmd = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    ContentType: contentType,
+  })
+  return getSignedUrl(r2, cmd, { expiresIn: 300 })
+}
+
+/** 再生用署名付きURL（1時間有効） */
+export async function getStreamUrl(key: string) {
+  const { GetObjectCommand } = await import('@aws-sdk/client-s3')
+  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key })
+  return getSignedUrl(r2, cmd, { expiresIn: 3600 })
+}
+
+export async function deleteObject(key: string) {
+  await r2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }))
+}
+
+const ALLOWED_AUDIO_TYPES: Record<string, string> = {
+  'audio/mpeg': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/flac': 'flac',
+  'audio/wav': 'wav',
+  'audio/ogg': 'ogg',
+}
+
+export function getAudioExt(contentType: string): string | null {
+  return ALLOWED_AUDIO_TYPES[contentType] ?? null
+}
