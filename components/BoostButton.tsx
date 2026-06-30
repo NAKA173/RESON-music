@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { PaymentConfirmModal } from './PaymentConfirmModal'
 
 interface BoostStatus {
   used: number
@@ -14,6 +15,7 @@ export function BoostButton({ trackId }: { trackId: string }) {
   const [boosting, setBoosting] = useState(false)
   const [error, setError] = useState('')
   const [justBoosted, setJustBoosted] = useState(false)
+  const [clientSecret, setClientSecret] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/boost')
@@ -38,9 +40,14 @@ export function BoostButton({ trackId }: { trackId: string }) {
       setStatus((s) => s ? { ...s, used: s.used + 1, remaining: data.remaining, free_remaining: Math.max(s.free_remaining - 1, 0) } : s)
       setTimeout(() => setJustBoosted(false), 1500)
     } else {
-      // 有料分は決済確認が必要（最小実装: 今は決済UIへの導線案内のみ）
-      setError(`追加ブーストは¥${data.price_yen}（決済確認は別途必要です）`)
+      setClientSecret(data.client_secret)
     }
+  }
+
+  function onPaidSuccess() {
+    setJustBoosted(true)
+    setStatus((s) => s ? { ...s, used: s.used + 1, remaining: Math.max(s.remaining - 1, 0) } : s)
+    setTimeout(() => setJustBoosted(false), 1500)
   }
 
   if (!status) return null
@@ -59,6 +66,15 @@ export function BoostButton({ trackId }: { trackId: string }) {
         今月残り{status.remaining}回（無料{status.free_remaining}回）
       </span>
       {error && <span className="text-xs text-red-400">{error}</span>}
+
+      {clientSecret && (
+        <PaymentConfirmModal
+          clientSecret={clientSecret}
+          title={`追加ブースト（¥${status.price_yen}）`}
+          onSuccess={onPaidSuccess}
+          onClose={() => setClientSecret(null)}
+        />
+      )}
     </div>
   )
 }

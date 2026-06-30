@@ -284,6 +284,41 @@ UIの分離：❤️ボタンとブーストボタン（ロケットモチーフ
 
 ---
 
+## 収益化フロー本格化・Support Graph（Phase 1拡張・Phase 2）
+
+```
+発覚した不整合の修正：
+  app/api/stripe/webhook/route.ts の handleTipSucceeded は、Free/Standard/Student
+  プランの投げ銭の net_yen を supports に記録するだけで、artist_balances へ加算する
+  処理が存在しなかった（Support+ のみ settle_support_plus_tips で月末精算されていた）。
+  → handleTipSucceeded 内で users.plan を確認し、support_plus 以外は即時
+    add_artist_balance を呼ぶように修正（ブースト課金と同じ「直接送金」方式に統一）。
+
+フロントエンドの決済確認フローを新規実装（@stripe/stripe-js, @stripe/react-stripe-js 追加）：
+  これまで /api/supports・/api/boost は PaymentIntent の client_secret を返すだけで、
+  実際にカード情報を入力してpaymentを確定するUIが存在しなかった（決済が完了しない状態）。
+  lib/stripe-client.ts            loadStripe() のシングルトン（NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY）
+  components/PaymentConfirmModal.tsx  Stripe Elements + PaymentElement の確認モーダル（汎用）
+  components/SupportButton.tsx    ❤️ボタン（無料・即時）+ 投げ銭ボタン（プリセット額→決済確認モーダル）
+  components/BoostButton.tsx      無料ブーストは即時記録のまま、追加課金分のみ決済確認モーダルに接続
+  components/Player.tsx           上記2コンポーネントをプレイヤーUIに追加（従来ブーストのみだった）
+
+Support Graph（応援の連鎖表示）：
+  自分がフォロー中のユーザーのうち、再生中の楽曲を応援（❤️・投げ銭・ブースト）した人を表示。
+  「相性で出会う」発見性の設計の一部として、知らないアーティストでもフォロー中の人の応援を
+  通じて信頼の連鎖から発見できるようにする。
+  API: app/api/tracks/[trackId]/support-graph/route.ts
+    GET：自分のfollows(followee_type='user')と一致するsupports/boost_heartsのuser_idを集計。
+    フォロー中の応援者がいない場合は総応援数のみ返す（プライバシー上、個人の特定はフォロー関係がある場合のみ）。
+  UI: components/SupportGraph.tsx（Player内に表示）
+
+未解決（既存の課題のまま）：
+  追加ブースト（30円）はStripeの実用上の最低決済額（50円）を下回るため、本番導入前に
+  決済方式の見直しが必要（v3.4第8章に既存記載のまま）。
+```
+
+---
+
 ## PaymentProvider抽象化レイヤー（v3.4第3章）
 
 ```
@@ -485,7 +520,7 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   - [ ] Redisキャッシュ（LLMクエリ）
   - [x] 探索モード（再生数100〜5,000限定推薦）
   - [x] 熱量スコアベース推薦
-  - [ ] Support Graph（応援の連鎖表示）
+  - [x] Support Graph（応援の連鎖表示。フォロー中ユーザーの応援を表示・詳細は上記節）
   - [x] 多層ジャンルタグ
   - [x] 紹介制（招待リンク・特典なし。Phase 4の「招待リクエスト機能」とは別物）
   - [x] SNSレイヤー基本機能（フォロー・投稿・コメント・いいね・通知。v3.4第9章）

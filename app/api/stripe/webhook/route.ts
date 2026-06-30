@@ -103,6 +103,18 @@ async function handleTipSucceeded(
     amount_yen: Number(net_yen),
     payment_id: providerChargeId,
   })
+
+  // Support+ は月末の settle_support_plus_tips で精算するため、ここでは即時加算しない
+  const { data: userData } = await supabase.from('users').select('plan').eq('id', user_id).single()
+  if ((userData as { plan?: string })?.plan === 'support_plus') return
+
+  const { data: track } = await supabase.from('tracks').select('artist_id').eq('id', track_id).single()
+  if (!track) return
+
+  await supabase.rpc('add_artist_balance', {
+    p_artist_id: track.artist_id,
+    p_amount: Number(net_yen),
+  })
 }
 
 const BOOST_ARTIST_SHARE = 0.7 // 21円（70%）。残り30%は運営取得（投げ銭より高め）

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { BoostButton } from './BoostButton'
+import { SupportButton } from './SupportButton'
+import { SupportGraph } from './SupportGraph'
 
 interface Track {
   id: string
@@ -147,10 +149,14 @@ export function Player({ track, onEnded }: PlayerProps) {
         <div className="bg-white h-0.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
 
-      {/* ブーストハート */}
-      <div className="flex justify-center">
+      {/* 応援・ブースト */}
+      <div className="flex flex-wrap justify-center gap-2">
+        <SupportButton trackId={track.id} />
         <BoostButton trackId={track.id} />
       </div>
+
+      {/* Support Graph */}
+      <SupportGraph trackId={track.id} />
     </div>
   )
 }
