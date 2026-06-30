@@ -19,6 +19,10 @@ interface HeatTrack extends Track {
   heat_score: number
 }
 
+interface ForYouTrack extends HeatTrack {
+  because_you_like: boolean
+}
+
 const navItems = [
   { href: '/home', label: 'ホーム', icon: '⌂' },
   { href: '/search', label: 'さがす', icon: '⌕' },
@@ -41,6 +45,7 @@ const explore = [
 export default function PlayerPage() {
   const [tracks, setTracks] = useState<Track[]>([])
   const [heatTracks, setHeatTracks] = useState<HeatTrack[]>([])
+  const [forYouTracks, setForYouTracks] = useState<ForYouTrack[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -54,6 +59,9 @@ export default function PlayerPage() {
     fetch('/api/recommendations/heat')
       .then((r) => r.json())
       .then((d) => setHeatTracks(d.tracks ?? []))
+    fetch('/api/recommendations/foryou')
+      .then((r) => (r.ok ? r.json() : { tracks: [] }))
+      .then((d) => setForYouTracks(d.tracks ?? []))
   }, [])
 
   const current = tracks[currentIdx] ?? null
@@ -125,6 +133,42 @@ export default function PlayerPage() {
                 最初の楽曲をアップロード
               </Link>
             </div>
+          )}
+
+          {/* あなたへのおすすめ */}
+          {forYouTracks.length > 0 && (
+            <section>
+              <h2 className="font-display text-lg font-bold">あなたへのおすすめ</h2>
+              <p className="mt-1 text-xs text-[var(--faint)]">
+                よく聴いているアーティストの熱量が高い楽曲を優先表示
+              </p>
+              <div className="scroll-x mt-4 gap-4 pb-2">
+                {forYouTracks.map((t, i) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      const idx = tracks.findIndex((tr) => tr.id === t.id)
+                      if (idx >= 0) setCurrentIdx(idx)
+                    }}
+                    className="flex w-40 shrink-0 flex-col rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)]"
+                  >
+                    <span
+                      className="block aspect-square w-full rounded-lg"
+                      style={{ backgroundColor: ['#3dc8f2', '#f23d8c', '#c8f23d', '#f2c83d'][i % 4] }}
+                    />
+                    <p className="mt-3 truncate text-sm font-medium">{t.title}</p>
+                    <p className="truncate text-xs text-[var(--dim)]">{t.artists?.name ?? '不明'}</p>
+                    <p className="mt-1 text-xs text-[var(--faint)]">
+                      {t.because_you_like ? (
+                        <span className="text-[var(--accent)]">よく聴くアーティスト</span>
+                      ) : (
+                        `完聴率 ${Math.round(t.completion_rate * 100)}%`
+                      )}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* 熱量が高まっている楽曲 */}
