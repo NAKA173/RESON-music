@@ -164,6 +164,18 @@ fraud_flags (
   resolved bool DEFAULT false,
   created_at timestamptz
 )
+
+-- Studentプラン .ed.jp認証コード
+student_verifications (
+  id uuid PK,
+  user_id uuid REFERENCES users(id),
+  school_email text,
+  code text,
+  expires_at timestamptz,   -- 発行から10分
+  attempts int DEFAULT 0,   -- 5回まで
+  verified bool DEFAULT false,
+  created_at timestamptz
+)
 ```
 
 ---
@@ -296,6 +308,19 @@ Student:   250円  無制限・.ed.jp認証
 Support+: 1,000円  高音質・応援ボーナス
 ```
 
+### Studentプラン .ed.jp認証（v3.4第9章・Phase 3）
+
+```
+フロー：
+  1. app/api/student/verify/request  school_email（.ed.jpドメイン必須）を受け取り、
+     6桁コードを student_verifications に保存（有効期限10分）
+  2. app/api/student/verify/confirm  コード確認（試行5回まで）→ users.student_verified = true
+  3. 認証済みの場合のみ app/api/stripe/checkout で plan='student' のCheckoutを許可
+
+未解決：メール配信基盤が未構築のため、確認コードの実際の送信経路は未実装
+  （本番導入前に解決必須。SMS認証はSupabase Auth経由のため対象外・既存のまま維持）
+```
+
 ---
 
 ## アーティスト出金ルール
@@ -307,6 +332,14 @@ Support+: 1,000円  高音質・応援ボーナス
 累積50,000円超：出金申請を強制通知
 2年間未出金：休眠口座として運営が保留（没収しない）
 ```
+
+実装（最小実装・手動運用前提・管理UIなし）：
+  app/api/payout/request/route.ts   アーティスト本人が申請（既存・最低1,000円・pending重複防止）
+  app/api/payout/process/route.ts   管理者がpaid/rejectedを確定（CRON_SECRET認証・paid時にartist_balancesを減算）
+  app/api/payout/batch/route.ts     月次バッチ（CRON_SECRET認証）：
+    - checkBalanceNotifications：残高5万円超えで未通知（or 30日以上未通知）のアーティストへ通知
+    - checkDormantAccounts：直近の出金（なければ残高発生時点）から2年以上経過したらdormant=trueに設定（没収はしない）
+  lib/payout/rules.ts  純粋関数（shouldNotifyBalance / isDormant）・テスト済み
 
 ---
 
@@ -393,11 +426,11 @@ Support+: 1,000円  高音質・応援ボーナス
   - [x] ブーストハート🚀（月3回無料+課金20回・重み2倍・直接70%送金。v3.4第8章。週間伸び率ランキングは未実装）
 
 - [ ] **Phase 3**（6〜8ヶ月）学生・決済拡張
-  - [ ] Studentプラン + .ed.jp認証
+  - [x] Studentプラン + .ed.jp認証（コード確認フローのみ実装。メール送信経路は未実装・要解決）
   - [ ] コンビニ払い（Stripe Konbini・30日前から審査申請）
   - [ ] ペアレンタル決済フロー
   - [ ] ギフトコード
-  - [ ] 出金処理・artist_balances管理
+  - [x] 出金処理・artist_balances管理（申請承認/却下・残高通知・休眠判定。管理UIはなし・CRON_SECRET認証のAPIのみ）
   - [ ] 不正検知バッチ
 
 - [ ] **Phase 4**（8〜12ヶ月）エコノミー
@@ -465,6 +498,7 @@ ANTHROPIC_API_KEY=
 | 5 | JASRAC包括契約（弁護士） | 高 | Phase 3以降のカタログ |
 | 6 | 未成年アーティストの親権者同意フロー | 高 | Phase 0の登録設計 |
 | 7 | AcoustIDの利用規約・商用利用条件 | 中 | Phase 1の審査フロー |
+| 8 | メール配信基盤の選定（.ed.jp確認コード送信用） | 高 | Studentプラン認証フローの本番稼働 |
 
 ---
 

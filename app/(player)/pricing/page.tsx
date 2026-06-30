@@ -19,6 +19,13 @@ const PLANS = [
     highlight: false,
   },
   {
+    id: 'student' as const,
+    name: 'Student',
+    price: 250,
+    features: ['無制限', '広告なし', '標準音質', '.ed.jpメール認証が必要'],
+    highlight: false,
+  },
+  {
     id: 'support_plus' as const,
     name: 'Support+',
     price: 1000,
@@ -32,9 +39,19 @@ function PricingContent() {
   const params = useSearchParams()
   const success = params.get('success') === '1'
   const [loading, setLoading] = useState<string | null>(null)
+  const [studentStep, setStudentStep] = useState<'closed' | 'email' | 'code'>('closed')
+  const [schoolEmail, setSchoolEmail] = useState('')
+  const [verifyCode, setVerifyCode] = useState('')
+  const [studentError, setStudentError] = useState('')
+  const [studentBusy, setStudentBusy] = useState(false)
 
   async function subscribe(planId: string) {
     if (planId === 'free') return
+    if (planId === 'student') {
+      setStudentError('')
+      setStudentStep('email')
+      return
+    }
     setLoading(planId)
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
@@ -47,6 +64,50 @@ function PricingContent() {
       alert(data.error)
       return
     }
+    router.push(data.url)
+  }
+
+  async function sendStudentCode() {
+    setStudentBusy(true)
+    setStudentError('')
+    const res = await fetch('/api/student/verify/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ school_email: schoolEmail }),
+    })
+    const data = await res.json()
+    setStudentBusy(false)
+    if (!res.ok) { setStudentError(data.error); return }
+    setStudentStep('code')
+  }
+
+  async function confirmStudentCode() {
+    setStudentBusy(true)
+    setStudentError('')
+    const res = await fetch('/api/student/verify/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: verifyCode }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      setStudentBusy(false)
+      setStudentError(data.error)
+      return
+    }
+    setStudentStep('closed')
+    await subscribeStudent()
+  }
+
+  async function subscribeStudent() {
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: 'student' }),
+    })
+    const data = await res.json()
+    setStudentBusy(false)
+    if (!res.ok) { alert(data.error); return }
     router.push(data.url)
   }
 
@@ -71,7 +132,7 @@ function PricingContent() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PLANS.map((plan) => (
             <div
               key={plan.id}
@@ -117,6 +178,53 @@ function PricingContent() {
             </div>
           ))}
         </div>
+
+        {studentStep !== 'closed' && (
+          <div className="border border-zinc-700 rounded-2xl p-6 max-w-sm mx-auto space-y-3">
+            <p className="font-semibold text-sm">Studentプラン認証</p>
+            <p className="text-xs text-zinc-500">学校発行の .ed.jp メールアドレスで本人確認が必要です</p>
+            {studentStep === 'email' && (
+              <>
+                <input
+                  type="email"
+                  placeholder="example@school.ed.jp"
+                  value={schoolEmail}
+                  onChange={(e) => setSchoolEmail(e.target.value)}
+                  className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={sendStudentCode}
+                  disabled={studentBusy || !schoolEmail}
+                  className="w-full rounded-lg py-2 text-sm font-semibold bg-white text-black disabled:opacity-50"
+                >
+                  {studentBusy ? '送信中…' : '認証コードを送信'}
+                </button>
+              </>
+            )}
+            {studentStep === 'code' && (
+              <>
+                <input
+                  type="text"
+                  placeholder="6桁のコード"
+                  value={verifyCode}
+                  onChange={(e) => setVerifyCode(e.target.value)}
+                  className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={confirmStudentCode}
+                  disabled={studentBusy || !verifyCode}
+                  className="w-full rounded-lg py-2 text-sm font-semibold bg-white text-black disabled:opacity-50"
+                >
+                  {studentBusy ? '確認中…' : '確認して登録へ進む'}
+                </button>
+              </>
+            )}
+            {studentError && <p className="text-xs text-red-400">{studentError}</p>}
+            <button onClick={() => setStudentStep('closed')} className="text-xs text-zinc-500 underline">
+              キャンセル
+            </button>
+          </div>
+        )}
 
         <div className="text-center">
           <button
