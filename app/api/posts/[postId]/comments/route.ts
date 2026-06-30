@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/sns/notify'
+import { isBlockedEitherWay } from '@/lib/sns/blocks'
 import { NextRequest, NextResponse } from 'next/server'
 
 const MAX_BODY_LEN = 500
@@ -42,6 +43,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pos
   const { data: post } = await supabase.from('posts').select('author_user_id').eq('id', postId).single()
   if (!post) {
     return NextResponse.json({ error: '投稿が見つかりません' }, { status: 404 })
+  }
+
+  if (await isBlockedEitherWay(supabase, user.id, post.author_user_id)) {
+    return NextResponse.json({ error: 'コメントできません' }, { status: 403 })
   }
 
   const { data: comment, error } = await supabase

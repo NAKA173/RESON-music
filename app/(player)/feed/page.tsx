@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 interface Post {
   id: string
@@ -23,6 +24,16 @@ interface Comment {
 }
 
 export default function FeedPage() {
+  return (
+    <Suspense>
+      <FeedPageInner />
+    </Suspense>
+  )
+}
+
+function FeedPageInner() {
+  const searchParams = useSearchParams()
+  const genreId = searchParams.get('genre_id')
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')
@@ -32,14 +43,17 @@ export default function FeedPage() {
   const [comments, setComments] = useState<Comment[]>([])
   const [commentBody, setCommentBody] = useState('')
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [hiddenPostIds, setHiddenPostIds] = useState<Set<string>>(new Set())
 
   function loadFeed() {
-    fetch('/api/posts')
+    const url = genreId ? `/api/posts?genre_id=${genreId}` : '/api/posts'
+    fetch(url)
       .then((r) => r.json())
       .then((d) => { setPosts(d.posts ?? []); setLoading(false) })
   }
 
-  useEffect(() => { loadFeed() }, [])
+  useEffect(() => { loadFeed() }, [genreId])
 
   async function submitPost(e: React.FormEvent) {
     e.preventDefault()
@@ -49,7 +63,7 @@ export default function FeedPage() {
     const res = await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, genre_id: genreId || undefined }),
     })
     const data = await res.json()
     setPosting(false)
@@ -99,6 +113,31 @@ export default function FeedPage() {
     setComments(data.comments ?? [])
   }
 
+  async function reportPost(postId: string) {
+    const reason = window.prompt('報告理由を入力してください（500文字以内）')
+    if (!reason || !reason.trim()) return
+    const res = await fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_type: 'post', target_id: postId, reason }),
+    })
+    setOpenMenu(null)
+    if (res.ok) window.alert('報告しました')
+  }
+
+  async function blockUser(authorUserId: string) {
+    if (!window.confirm('このユーザーをブロックしますか？')) return
+    const res = await fetch('/api/blocks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blocked_id: authorUserId }),
+    })
+    setOpenMenu(null)
+    if (res.ok) {
+      setHiddenPostIds((prev) => new Set([...prev, ...posts.filter((p) => p.author_user_id === authorUserId).map((p) => p.id)]))
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[var(--bg)] px-4 py-10 text-[var(--text)] sm:px-8">
       <div className="mx-auto max-w-lg">
@@ -143,11 +182,29 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="mt-6 space-y-4">
-            {posts.map((p) => (
-              <div key={p.id} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
-                <p className="text-xs text-[var(--faint)]">
-                  {p.artists?.name ?? 'リスナー'} ・ {new Date(p.created_at).toLocaleDateString('ja-JP')}
-                </p>
+            {posts.filter((p) => !hiddenPostIds.has(p.id)).map((p) => (
+              <div key={p.id} className="relative rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
+                <div className="flex items-start justify-between">
+                  <p className="text-xs text-[var(--faint)]">
+                    {p.artists?.name ?? 'リスナー'} ・ {new Date(p.created_at).toLocaleDateString('ja-JP')}
+                  </p>
+                  <button
+                    onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}
+                    className="text-[var(--faint)] hover:text-[var(--text)]"
+                  >
+                    ⋯
+                  </button>
+                </div>
+                {openMenu === p.id && (
+                  <div className="absolute right-4 top-8 z-10 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs shadow-lg">
+                    <button onClick={() => reportPost(p.id)} className="block w-full px-4 py-2 text-left hover:bg-[var(--panel)]">
+                      🚩 報告する
+                    </button>
+                    <button onClick={() => blockUser(p.author_user_id)} className="block w-full px-4 py-2 text-left text-red-400 hover:bg-[var(--panel)]">
+                      🚫 ブロックする
+                    </button>
+                  </div>
+                )}
                 <p className="mt-2 whitespace-pre-wrap text-sm">{p.body}</p>
                 {p.tracks && (
                   <p className="mt-2 text-xs text-[var(--accent)]">♪ {p.tracks.title}</p>

@@ -108,6 +108,24 @@ export default function PlayerPage() {
           友人を招待する →
         </Link>
         <Link
+          href="/communities"
+          className="mt-3 text-xs text-[var(--faint)] hover:text-[var(--dim)]"
+        >
+          コミュニティ →
+        </Link>
+        <Link
+          href="/events"
+          className="mt-1 text-xs text-[var(--faint)] hover:text-[var(--dim)]"
+        >
+          ライブ情報 →
+        </Link>
+        <Link
+          href="/profile"
+          className="mt-1 text-xs text-[var(--faint)] hover:text-[var(--dim)]"
+        >
+          音楽人格・プロフィール →
+        </Link>
+        <Link
           href="/dashboard"
           className="mt-auto text-xs text-[var(--faint)] hover:text-[var(--dim)]"
         >

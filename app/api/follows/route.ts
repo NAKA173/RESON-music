@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createNotification } from '@/lib/sns/notify'
+import { isBlockedEitherWay } from '@/lib/sns/blocks'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
@@ -40,6 +41,10 @@ export async function POST(req: NextRequest) {
   }
   if (followee_type === 'user' && followee_id === user.id) {
     return NextResponse.json({ error: '自分自身をフォローできません' }, { status: 400 })
+  }
+
+  if (followee_type === 'user' && await isBlockedEitherWay(supabase, user.id, followee_id)) {
+    return NextResponse.json({ error: 'フォローできません' }, { status: 403 })
   }
 
   const { error } = await supabase.from('follows').insert({

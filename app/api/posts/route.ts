@@ -6,11 +6,12 @@ const MAX_BODY_LEN = 1000
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const limit = Math.min(Number(req.nextUrl.searchParams.get('limit') ?? 30), 50)
+  const genreId = req.nextUrl.searchParams.get('genre_id')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('posts')
     .select(`
-      id, body, visibility, created_at, track_id,
+      id, body, visibility, created_at, track_id, genre_id,
       author_user_id, author_artist_id,
       tracks ( id, title ),
       artists:author_artist_id ( id, name )
@@ -21,11 +22,31 @@ export async function GET(req: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(limit)
 
+  if (genreId) {
+    query = query.eq('genre_id', genreId)
+  }
+
+  const { data, error } = await query
+
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ posts: data ?? [] })
+  // ブロック関係にある相手の投稿は除外する（ログイン中のみ）
+  const { data: { user } } = await supabase.auth.getUser()
+  let posts = data ?? []
+  if (user) {
+    const { data: blocked } = await supabase
+      .from('blocks')
+      .select('blocker_id, blocked_id')
+      .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`)
+    const hiddenAuthors = new Set(
+      (blocked ?? []).map((b) => (b.blocker_id === user.id ? b.blocked_id : b.blocker_id))
+    )
+    posts = posts.filter((p) => !hiddenAuthors.has(p.author_user_id))
+  }
+
+  return NextResponse.json({ posts })
 }
 
 export async function POST(req: NextRequest) {
@@ -35,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { body, track_id, author_artist_id, visibility } = await req.json()
+  const { body, track_id, author_artist_id, visibility, genre_id } = await req.json()
 
   if (!body || typeof body !== 'string' || !body.trim()) {
     return NextResponse.json({ error: '本文は必須です' }, { status: 400 })
@@ -63,8 +84,9 @@ export async function POST(req: NextRequest) {
       track_id: track_id ?? null,
       body: body.trim(),
       visibility: vis,
+      genre_id: genre_id ?? null,
     })
-    .select('id, body, visibility, created_at, track_id, author_user_id, author_artist_id')
+    .select('id, body, visibility, created_at, track_id, genre_id, author_user_id, author_artist_id')
     .single()
 
   if (error) {

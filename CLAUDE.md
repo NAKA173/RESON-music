@@ -422,7 +422,8 @@ Support+: 1,000円  高音質・応援ボーナス
   - [ ] Support Graph（応援の連鎖表示）
   - [x] 多層ジャンルタグ
   - [x] 紹介制（招待リンク・特典なし。Phase 4の「招待リクエスト機能」とは別物）
-  - [x] SNSレイヤー基本機能（フォロー・投稿・コメント・いいね・通知。v3.4第9章。コミュニティ・ライブ情報・音楽人格は未実装）
+  - [x] SNSレイヤー基本機能（フォロー・投稿・コメント・いいね・通知。v3.4第9章）
+  - [x] ジャンル別コミュニティ・ライブ情報・音楽人格・ブロック/通報（v3.4第9章。詳細は下記「SNS拡張機能」節）
   - [x] ブーストハート🚀（月3回無料+課金20回・重み2倍・直接70%送金。v3.4第8章。週間伸び率ランキングは未実装）
 
 - [ ] **Phase 3**（6〜8ヶ月）学生・決済拡張
@@ -439,6 +440,53 @@ Support+: 1,000円  高音質・応援ボーナス
   - [ ] 創設アーティスト制度（バッジ・重み+0.2）
   - [ ] 人力審査ダッシュボード
   - [ ] 多通貨対応（DBは最初からcurrency付き）
+
+---
+
+## SNS拡張機能（v3.4第9章・Phase 2）
+
+```
+ジャンル別コミュニティ：
+  既存の genres テーブルを再利用（新規タクソノミーは作らない）。
+  community_members (user_id, genre_id) で参加状況を管理。
+  posts.genre_id を追加し、既存の /api/posts をそのままコミュニティ専用フィードとして
+  利用（?genre_id= クエリで絞り込み）。
+  API: app/api/communities/route.ts（GET一覧/参加状況・POST参加・DELETE離脱）
+  UI:  app/(player)/communities/page.tsx → 参加ボタン・「フィードへ」リンク
+
+ライブ情報（Event）：
+  events（アーティスト所有・タイトル/日時/場所/チケットURL）
+  event_attendees（interested / going のRSVP・本人のみ登録解除）
+  API: app/api/events/route.ts（GET一覧・POST作成＝アーティスト本人のみ）
+       app/api/events/[eventId]/attend/route.ts（POST/DELETE）
+  UI:  app/(player)/events/page.tsx
+
+音楽人格（UserProfile）：
+  user_profiles（display_name / bio / persona_tags[] / avatar_url）
+  MVPはユーザー自己申告のタグ編集のみ。聴取データ（play_events）からの
+  自動算出は未実装（Phase 4以降の課題として持ち越し）。
+  API: app/api/profile/route.ts（GET自分or?user_id=他人・PATCH自分のみ）
+  UI:  app/(player)/profile/page.tsx
+
+ブロック/通報：
+  blocks は一方向で保存（blocker_id視点のみ・RLSでブロックした側のみ参照可）。
+  フォロー・コメントへの影響は lib/sns/blocks.ts の isBlockedEitherWay() で
+  双方向にAPI層で抑制（app/api/follows, app/api/posts/[postId]/comments,
+  app/api/posts のフィード除外に適用）。
+  isBlockedEitherWay() はUUID形式を正規表現で検証してから .or() フィルタに
+  埋め込む（フィルタ構文インジェクション対策）。
+  reports は保存のみ（status: pending/reviewed/dismissed）。人力審査ダッシュ
+  ボードは未実装（(admin) は空ディレクトリのまま）。status更新はservice role経由
+  のみ想定。
+  API: app/api/blocks/route.ts（GET/POST/DELETE。ブロック時に双方向フォローを解除）
+       app/api/reports/route.ts（POST。target_type: post/comment/user/artist）
+  UI:  app/(player)/feed/page.tsx の投稿カードに「⋯」メニュー（報告する/ブロックする）
+
+RLS：supabase/migrations/20260016_community_event_profile_safety.sql に
+  community_members / events / event_attendees / user_profiles / blocks /
+  reports の全テーブルのRLSを定義（公開読み取り系は public_read、
+  本人操作系は auth.uid() 比較）。
+```
 
 ---
 
