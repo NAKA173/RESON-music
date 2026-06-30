@@ -344,6 +344,51 @@ Support+: 1,000円  高音質・応援ボーナス
 
 ---
 
+## アーティスト登録審査・出金先銀行口座（Phase 0拡張・配信代行サービスのフローを参考に追加）
+
+```
+参考にした実サービスのフロー（WebSearchで調査）：
+  - TuneCore Japan：配信審査に通過するまで利用料は課金されない。銀行口座の名義は
+    登録者本人の氏名と一致が必須。著作権者の同意は省略不可（権利確認フロー必須）。
+  - BIG UP!：アーティスト登録後、楽曲・ジャケット登録を経て審査（人力・実例で数日）
+    を通過してから配信開始。ジャケット画像の権利侵害が主な却下理由。
+
+RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作らずCRON_SECRET運用で統一）：
+  artists.review_status text ('pending' | 'approved' | 'rejected') DEFAULT 'pending'
+    既存アーティストはマイグレーション時点で 'approved' に移行済み（無審査運用してきたため）。
+  artists.rights_confirmed bool / rights_confirmed_at timestamptz
+    登録時に著作権・第三者権利侵害なし・銀行情報正確性のチェックボックス同意が必須（スキップ不可）。
+  artist_bank_accounts（出金先銀行口座。本人名義一致の検証はUI上の注記のみ・自動検証は未実装）
+    bank_name / branch_name / account_type('ordinary'|'checking') / account_number /
+    account_holder_name。RLSは本人（artists.user_id）のみ読み書き可。
+
+登録フロー（app/(auth)/register/page.tsx）：
+  phone → otp → artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認・同意必須）→ done
+  審査が承認されるまでアップロード自体は可能（配信開始＝公開のゲートではなく、登録ステータス
+  の可視化のみ・実際の配信停止ロジックは未実装。Phase 4の人力審査ダッシュボードで本格運用予定）。
+
+審査API：app/api/artist/review/route.ts（CRON_SECRET認証・POST { artist_id, action }）
+  app/api/payout/process/route.ts と同じ「管理UIなし・bearer tokenで手動運用」パターンを採用。
+
+ダッシュボード（app/(artist)/dashboard/page.tsx）：review_status が pending/rejected の場合に
+  バナー表示。アルバム一覧も追加表示（/api/albums?mine=true）。
+```
+
+---
+
+## アーティスト向け月次レポート（Phase 1・CLAUDE.mdディレクトリ構成で計画していたreport/を実装）
+
+```
+app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タブ・各スコアの計算式
+  ・プラン重み係数の注記・raw_score合成式・分配額の算出式・楽曲別の分配対象状況（100再生の
+  閾値）を表示。「分配計算の計算式はパブリックページで常時公開」という実装ルールに対応する
+  アーティスト本人向けの詳細ビュー（/dashboard は概要、/report は計算根拠の内訳に特化）。
+  新規の月次通知（分配確定時にアーティストへ通知を送る仕組み）は未実装（既存のSNS通知機構
+  との連携は今後の課題）。
+```
+
+---
+
 ## アーティスト出金ルール
 
 ```

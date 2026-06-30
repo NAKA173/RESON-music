@@ -23,7 +23,7 @@ interface Track {
 }
 
 interface ReportData {
-  artist: { id: string; name: string }
+  artist: { id: string; name: string; review_status: 'pending' | 'approved' | 'rejected' }
   balance: { balance_yen: number; dormant: boolean }
   distributions: Distribution[]
   tracks: Track[]
@@ -36,12 +36,19 @@ interface PayoutRequest {
   requested_at: string
 }
 
+interface AlbumSummary {
+  id: string
+  title: string
+  released_at: string | null
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([])
   const [payoutError, setPayoutError] = useState('')
   const [payoutLoading, setPayoutLoading] = useState(false)
+  const [albums, setAlbums] = useState<AlbumSummary[]>([])
 
   useEffect(() => {
     fetch('/api/artist/report')
@@ -50,6 +57,9 @@ export default function DashboardPage() {
     fetch('/api/payout/request')
       .then((r) => (r.ok ? r.json() : { requests: [] }))
       .then((d) => setPayoutRequests(d.requests ?? []))
+    fetch('/api/albums?mine=true')
+      .then((r) => (r.ok ? r.json() : { albums: [] }))
+      .then((d) => setAlbums(d.albums ?? []))
   }, [])
 
   async function requestPayout() {
@@ -96,13 +106,33 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold">{data.artist.name}</h1>
             <p className="text-sm text-zinc-400">アーティストダッシュボード</p>
           </div>
-          <Link
-            href="/upload"
-            className="text-sm bg-white text-black px-4 py-2 rounded-lg font-semibold hover:bg-zinc-200 transition"
-          >
-            + アップロード
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/report"
+              className="text-sm border border-zinc-700 px-4 py-2 rounded-lg font-semibold hover:border-zinc-400 transition"
+            >
+              レポート
+            </Link>
+            <Link
+              href="/upload"
+              className="text-sm bg-white text-black px-4 py-2 rounded-lg font-semibold hover:bg-zinc-200 transition"
+            >
+              + アップロード
+            </Link>
+          </div>
         </div>
+
+        {/* 審査ステータス */}
+        {data.artist.review_status === 'pending' && (
+          <div className="bg-zinc-900 border border-yellow-800 rounded-2xl p-4 text-sm text-yellow-400">
+            審査中です。審査完了まで楽曲のアップロード・運用は可能ですが、配信開始には審査の承認が必要です。
+          </div>
+        )}
+        {data.artist.review_status === 'rejected' && (
+          <div className="bg-zinc-900 border border-red-800 rounded-2xl p-4 text-sm text-red-400">
+            審査の結果、登録が承認されませんでした。詳細はサポートにお問い合わせください。
+          </div>
+        )}
 
         {/* 残高カード */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
@@ -223,6 +253,28 @@ export default function DashboardPage() {
                 </div>
                 <span className="text-zinc-400 ml-3 shrink-0">
                   {t.cumulative_plays.toLocaleString()}再生
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* アルバム */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">アルバム</h2>
+            <Link href="/upload" className="text-xs text-zinc-400 hover:text-white underline">
+              アップロード時に作成
+            </Link>
+          </div>
+          {albums.length === 0 ? (
+            <p className="text-sm text-zinc-500">まだアルバムがありません</p>
+          ) : (
+            albums.map((a) => (
+              <div key={a.id} className="flex justify-between text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
+                <span className="truncate">{a.title}</span>
+                <span className="text-zinc-500 text-xs">
+                  {a.released_at ? new Date(a.released_at).toLocaleDateString('ja-JP') : '未発表日'}
                 </span>
               </div>
             ))

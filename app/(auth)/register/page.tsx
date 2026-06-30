@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Step = 'phone' | 'otp' | 'artist'
+type Step = 'phone' | 'otp' | 'artist' | 'bank' | 'rights' | 'done'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -12,6 +12,12 @@ export default function RegisterPage() {
   const [otp, setOtp] = useState('')
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
+  const [bankName, setBankName] = useState('')
+  const [branchName, setBranchName] = useState('')
+  const [accountType, setAccountType] = useState<'ordinary' | 'checking'>('ordinary')
+  const [accountNumber, setAccountNumber] = useState('')
+  const [accountHolderName, setAccountHolderName] = useState('')
+  const [rightsConfirmed, setRightsConfirmed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -52,19 +58,46 @@ export default function RegisterPage() {
     setStep('artist')
   }
 
-  async function registerArtist(e: React.FormEvent) {
+  function nextFromArtist(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
+    setStep('bank')
+  }
+
+  function nextFromBank(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setStep('rights')
+  }
+
+  async function submitRegistration(e: React.FormEvent) {
+    e.preventDefault()
+    if (!rightsConfirmed) {
+      setError('権利確認への同意が必要です')
+      return
+    }
     setError('')
     setLoading(true)
     const res = await fetch('/api/auth/register-artist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, bio }),
+      body: JSON.stringify({
+        name,
+        bio,
+        rights_confirmed: rightsConfirmed,
+        bank: {
+          bank_name: bankName,
+          branch_name: branchName,
+          account_type: accountType,
+          account_number: accountNumber,
+          account_holder_name: accountHolderName,
+        },
+      }),
     })
     const data = await res.json()
     setLoading(false)
     if (!res.ok) { setError(data.error); return }
-    router.push('/dashboard')
+    setStep('done')
   }
 
   return (
@@ -75,7 +108,7 @@ export default function RegisterPage() {
           <p className="mt-2 text-sm text-zinc-400">アーティスト登録</p>
         </div>
 
-        <StepIndicator current={step} />
+        {step !== 'done' && <StepIndicator current={step} />}
 
         {error && (
           <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
@@ -142,7 +175,7 @@ export default function RegisterPage() {
         )}
 
         {step === 'artist' && (
-          <form onSubmit={registerArtist} className="space-y-4">
+          <form onSubmit={nextFromArtist} className="space-y-4">
             <div>
               <label className="block text-sm text-zinc-400 mb-1">アーティスト名 <span className="text-red-400">*</span></label>
               <input
@@ -169,38 +202,164 @@ export default function RegisterPage() {
             </div>
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
+              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
             >
-              {loading ? '登録中…' : '登録する'}
+              次へ（出金先の登録）
             </button>
           </form>
+        )}
+
+        {step === 'bank' && (
+          <form onSubmit={nextFromBank} className="space-y-4">
+            <p className="text-xs text-zinc-500">
+              分配金・出金の受け取り先として使用します。口座名義は登録者本人の氏名と一致させてください。
+            </p>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">銀行名 <span className="text-red-400">*</span></label>
+              <input
+                type="text"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                required
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">支店名 <span className="text-red-400">*</span></label>
+              <input
+                type="text"
+                value={branchName}
+                onChange={(e) => setBranchName(e.target.value)}
+                required
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">口座種別 <span className="text-red-400">*</span></label>
+              <select
+                value={accountType}
+                onChange={(e) => setAccountType(e.target.value as 'ordinary' | 'checking')}
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
+              >
+                <option value="ordinary">普通</option>
+                <option value="checking">当座</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">口座番号 <span className="text-red-400">*</span></label>
+              <input
+                type="text"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value)}
+                required
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">口座名義（カナ） <span className="text-red-400">*</span></label>
+              <input
+                type="text"
+                placeholder="例: ヤマダ タロウ"
+                value={accountHolderName}
+                onChange={(e) => setAccountHolderName(e.target.value)}
+                required
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
+            >
+              次へ（権利確認）
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep('artist')}
+              className="w-full text-sm text-zinc-500 hover:text-zinc-300 transition"
+            >
+              戻る
+            </button>
+          </form>
+        )}
+
+        {step === 'rights' && (
+          <form onSubmit={submitRegistration} className="space-y-4">
+            <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-300 space-y-2">
+              <p>アップロードする楽曲について、以下を確認してください。</p>
+              <ul className="list-disc list-inside text-zinc-400 space-y-1">
+                <li>自身が著作権・実演者の権利を有する、または権利者から許諾を得ている楽曲のみをアップロードします</li>
+                <li>第三者の権利を侵害するコンテンツ（無許諾サンプリング・カバー等）は登録しません</li>
+                <li>登録した銀行口座情報が正確であることを確認しました</li>
+              </ul>
+            </div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rightsConfirmed}
+                onChange={(e) => setRightsConfirmed(e.target.checked)}
+                className="w-5 h-5 mt-0.5 rounded accent-white"
+              />
+              <span className="text-sm">上記の内容に同意します</span>
+            </label>
+            <button
+              type="submit"
+              disabled={loading || !rightsConfirmed}
+              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
+            >
+              {loading ? '登録中…' : '登録を申請する'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep('bank')}
+              className="w-full text-sm text-zinc-500 hover:text-zinc-300 transition"
+            >
+              戻る
+            </button>
+          </form>
+        )}
+
+        {step === 'done' && (
+          <div className="text-center space-y-4">
+            <p className="text-4xl">🛠️</p>
+            <h2 className="text-lg font-bold">登録申請を受け付けました</h2>
+            <p className="text-sm text-zinc-400">
+              現在審査中です。審査完了まで楽曲の配信開始をお待ちください。アップロード自体は審査結果を待たずに行えます。
+            </p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
+            >
+              ダッシュボードへ
+            </button>
+          </div>
         )}
       </div>
     </main>
   )
 }
 
-function StepIndicator({ current }: { current: Step }) {
-  const steps: { key: Step; label: string }[] = [
+function StepIndicator({ current }: { current: Exclude<Step, 'done'> }) {
+  const steps: { key: Exclude<Step, 'done'>; label: string }[] = [
     { key: 'phone', label: '電話番号' },
     { key: 'otp', label: 'SMS認証' },
     { key: 'artist', label: 'プロフィール' },
+    { key: 'bank', label: '出金先' },
+    { key: 'rights', label: '権利確認' },
   ]
   const idx = steps.findIndex((s) => s.key === current)
 
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-1.5">
       {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-2">
-          <div className={`flex items-center gap-1.5 ${i <= idx ? 'text-white' : 'text-zinc-600'}`}>
+        <div key={s.key} className="flex items-center gap-1.5">
+          <div className={`flex items-center gap-1 ${i <= idx ? 'text-white' : 'text-zinc-600'}`}>
             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < idx ? 'bg-white text-black' : i === idx ? 'border-2 border-white' : 'border border-zinc-700'}`}>
               {i < idx ? '✓' : i + 1}
             </span>
             <span className="text-xs hidden sm:inline">{s.label}</span>
           </div>
           {i < steps.length - 1 && (
-            <div className={`w-6 h-px ${i < idx ? 'bg-white' : 'bg-zinc-700'}`} />
+            <div className={`w-4 h-px ${i < idx ? 'bg-white' : 'bg-zinc-700'}`} />
           )}
         </div>
       ))}
