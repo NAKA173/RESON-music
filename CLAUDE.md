@@ -294,22 +294,22 @@ Support+: 1,000円  高音質・応援ボーナス
 
 ## 実装フェーズ
 
-- [ ] **Phase 0**（1〜2ヶ月）基盤
-  - [ ] Supabase環境構築・スキーマ適用
-  - [ ] アーティスト登録フロー（SMS認証）
-  - [ ] 楽曲アップロード → R2保存 → 再生（Range Request対応）
-  - [ ] 基本プレイヤーUI
-  - [ ] Standard月額決済（PAY.JP or Stripe）
+- [x] **Phase 0**（1〜2ヶ月）基盤
+  - [x] Supabase環境構築・スキーマ適用
+  - [x] アーティスト登録フロー（SMS認証）
+  - [x] 楽曲アップロード → R2保存 → 再生（Range Request対応）
+  - [x] 基本プレイヤーUI
+  - [x] Standard月額決済（PAY.JP or Stripe）
 
-- [ ] **Phase 1**（2〜4ヶ月）コア機能
-  - [ ] 応援ボタン（❤️）+ 投げ銭フロー
-  - [ ] 再生ログ記録（play_events・INSERTのみ）
-  - [ ] 熱量スコア月次バッチ
-  - [ ] 分配プール計算・artist_balances更新
-  - [ ] アーティスト月次レポート（計算式付き）
-  - [ ] AcoustID重複検知
-  - [ ] AI生成タグ強制付与フロー
-  - [ ] Support+月間蓄積投げ銭精算
+- [x] **Phase 1**（2〜4ヶ月）コア機能
+  - [x] 応援ボタン（❤️）+ 投げ銭フロー
+  - [x] 再生ログ記録（play_events・INSERTのみ）
+  - [x] 熱量スコア月次バッチ
+  - [x] 分配プール計算・artist_balances更新
+  - [x] アーティスト月次レポート（計算式付き）
+  - [x] AcoustID重複検知
+  - [x] AI生成タグ強制付与フロー
+  - [x] Support+月間蓄積投げ銭精算
 
 - [ ] **Phase 2**（4〜6ヶ月）発見性
   - [ ] 文脈検索（Claude Haiku + pgvector）
