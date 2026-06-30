@@ -1,10 +1,17 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const ALLOWED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/flac', 'audio/wav', 'audio/ogg']
 const MAX_SIZE_MB = 200
+const MAX_GENRES = 3
+
+interface Genre {
+  id: string
+  name: string
+  parent_id: string | null
+}
 
 export default function UploadPage() {
   const router = useRouter()
@@ -17,6 +24,25 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
   const [aiWarning, setAiWarning] = useState('')
+  const [genres, setGenres] = useState<Genre[]>([])
+  const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/genres')
+      .then((r) => r.json())
+      .then((d) => setGenres(d.genres ?? []))
+  }, [])
+
+  function toggleGenre(id: string) {
+    setSelectedGenreIds((prev) => {
+      if (prev.includes(id)) return prev.filter((g) => g !== id)
+      if (prev.length >= MAX_GENRES) return prev
+      return [...prev, id]
+    })
+  }
+
+  const macroGenres = genres.filter((g) => !g.parent_id)
+  const subGenres = genres.filter((g) => g.parent_id)
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -69,6 +95,7 @@ export default function UploadPage() {
         title,
         duration_sec,
         ai_generated: aiGenerated,
+        genre_ids: selectedGenreIds,
       }),
     })
     const meta = await metaRes.json()
@@ -187,6 +214,34 @@ export default function UploadPage() {
               className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
             />
           </div>
+
+          {/* ジャンルタグ（最大{MAX_GENRES}個） */}
+          {genres.length > 0 && (
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">
+                ジャンルタグ（最大{MAX_GENRES}個）
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[...macroGenres, ...subGenres].map((g) => {
+                  const selected = selectedGenreIds.includes(g.id)
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => toggleGenre(g.id)}
+                      className={`text-xs rounded-full border px-3 py-1.5 transition ${
+                        selected
+                          ? 'border-white bg-white text-black'
+                          : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                      }`}
+                    >
+                      {g.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* AI生成フラグ */}
           <label className="flex items-center gap-3 cursor-pointer">

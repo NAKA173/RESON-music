@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { content_type, title, duration_sec, ai_generated } = await req.json()
+  const { content_type, title, duration_sec, ai_generated, genre_ids } = await req.json()
 
   const ext = getAudioExt(content_type)
   if (!ext) {
@@ -48,6 +48,12 @@ export async function POST(req: NextRequest) {
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
+
+  if (Array.isArray(genre_ids) && genre_ids.length > 0) {
+    await supabase
+      .from('track_genres')
+      .insert(genre_ids.slice(0, 3).map((genre_id: string) => ({ track_id: trackId, genre_id })))
   }
 
   const uploadUrl = await getUploadUrl(r2Key, content_type)

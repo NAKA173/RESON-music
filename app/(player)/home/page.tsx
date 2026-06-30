@@ -36,16 +36,21 @@ const artists = [
   { name: 'ヨル猫', genre: 'City Pop', color: '#f2c83d', founding: true },
 ]
 
-const explore = [
-  { title: '深夜のドライブに', subtitle: '再生数100〜5,000の隠れた名曲', color: '#1a2e1a' },
-  { title: '雨の日の朗読', subtitle: '知名度ではなく相性で出会う', color: '#1a1a2e' },
-  { title: '誰も知らない名曲', subtitle: '探索モード限定の推薦', color: '#2e1a1a' },
-]
+const exploreTileColors = ['#1a2e1a', '#1a1a2e', '#2e1a1a']
+
+interface ExploreTrack {
+  id: string
+  title: string
+  cumulative_plays: number
+  artist: { id: string; name: string } | null
+  genres: string[]
+}
 
 export default function PlayerPage() {
   const [tracks, setTracks] = useState<Track[]>([])
   const [heatTracks, setHeatTracks] = useState<HeatTrack[]>([])
   const [forYouTracks, setForYouTracks] = useState<ForYouTrack[]>([])
+  const [exploreTracks, setExploreTracks] = useState<ExploreTrack[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -62,6 +67,9 @@ export default function PlayerPage() {
     fetch('/api/recommendations/foryou')
       .then((r) => (r.ok ? r.json() : { tracks: [] }))
       .then((d) => setForYouTracks(d.tracks ?? []))
+    fetch('/api/explore')
+      .then((r) => r.json())
+      .then((d) => setExploreTracks((d.tracks ?? []).slice(0, 3)))
   }, [])
 
   const current = tracks[currentIdx] ?? null
@@ -226,26 +234,36 @@ export default function PlayerPage() {
           </section>
 
           {/* 探索モード */}
-          <section>
-            <h2 className="font-display text-lg font-bold">探索モード</h2>
-            <p className="mt-1 text-xs text-[var(--faint)]">
-              再生数 100〜5,000 の楽曲だけ。知名度ではなく相性で出会う
-            </p>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              {explore.map((e) => (
-                <div
-                  key={e.title}
-                  className="relative aspect-video overflow-hidden rounded-xl border border-[var(--line)]"
-                  style={{ backgroundColor: e.color }}
-                >
-                  <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 to-transparent p-4">
-                    <p className="text-sm font-bold">{e.title}</p>
-                    <p className="text-xs text-[var(--dim)]">{e.subtitle}</p>
+          {exploreTracks.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between">
+                <h2 className="font-display text-lg font-bold">探索モード</h2>
+                <Link href="/explore" className="text-xs text-[var(--dim)] hover:text-[var(--text)]">
+                  すべて見る →
+                </Link>
+              </div>
+              <p className="mt-1 text-xs text-[var(--faint)]">
+                再生数 100〜5,000 の楽曲だけ。知名度ではなく相性で出会う
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                {exploreTracks.map((t, i) => (
+                  <div
+                    key={t.id}
+                    className="relative aspect-video overflow-hidden rounded-xl border border-[var(--line)]"
+                    style={{ backgroundColor: exploreTileColors[i % exploreTileColors.length] }}
+                  >
+                    <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 to-transparent p-4">
+                      <p className="text-sm font-bold">{t.title}</p>
+                      <p className="text-xs text-[var(--dim)]">{t.artist?.name ?? '不明'}</p>
+                      {t.genres.length > 0 && (
+                        <p className="mt-1 text-[10px] text-[var(--faint)]">{t.genres.join(' / ')}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* トラックリスト */}
           {tracks.length > 0 && (
