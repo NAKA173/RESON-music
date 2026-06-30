@@ -13,13 +13,16 @@ interface TrackMeta {
 const WEIGHT_PLAY_TIME = 0.4
 const WEIGHT_SUPPORT_RATE = 0.35
 const WEIGHT_COMPLETION_RATE = 0.25
+const BOOST_HEART_WEIGHT = 2.0 // ブーストハートは応援度スコアへ重み2倍で反映（第8章）
 
 export function calcTrackScores(
   events: PlayEventRow[],
   supports: SupportCount[],
-  tracks: TrackMeta[]
+  tracks: TrackMeta[],
+  boosts: SupportCount[] = []
 ): TrackScore[] {
   const supportMap = new Map(supports.map((s) => [s.track_id, s.count]))
+  const boostMap = new Map(boosts.map((b) => [b.track_id, b.count]))
   const trackMap = new Map(tracks.map((t) => [t.track_id, t.artist_id]))
 
   // track_id ごとにイベントをグループ化
@@ -47,7 +50,10 @@ export function calcTrackScores(
       }, 0) / 3600
 
     const supportCount = supportMap.get(track_id) ?? 0
-    const support_rate = valid.length > 0 ? supportCount / valid.length : 0
+    const boostCount = boostMap.get(track_id) ?? 0
+    const support_rate = valid.length > 0
+      ? (supportCount + boostCount * BOOST_HEART_WEIGHT) / valid.length
+      : 0
 
     const completedCount = valid.filter((e) => e.completed).length
     const completion_rate = valid.length > 0 ? completedCount / valid.length : 0

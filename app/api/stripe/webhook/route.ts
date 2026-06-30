@@ -39,7 +39,11 @@ export async function POST(req: NextRequest) {
     }
     case 'payment_intent.succeeded': {
       const pi = event.data.object as Stripe.PaymentIntent
-      await handleTipSucceeded(supabase, pi)
+      if (pi.metadata?.type === 'boost') {
+        await handleBoostSucceeded(supabase, pi)
+      } else {
+        await handleTipSucceeded(supabase, pi)
+      }
       break
     }
     default:
@@ -115,5 +119,40 @@ async function handleTipSucceeded(
     user_id,
     amount_yen: Number(net_yen),
     payment_id: pi.id,
+  })
+}
+
+const BOOST_ARTIST_SHARE = 0.7 // 21円（70%）。残り30%は運営取得（投げ銭より高め）
+
+async function handleBoostSucceeded(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  pi: Stripe.PaymentIntent
+) {
+  const { track_id, user_id, year_month } = pi.metadata ?? {}
+  if (!track_id || !user_id || !year_month) return
+
+  // 冪等: payment_id で重複チェック
+  const { data: existing } = await supabase
+    .from('boost_hearts')
+    .select('id')
+    .eq('payment_id', pi.id)
+    .single()
+  if (existing) return
+
+  await supabase.from('boost_hearts').insert({
+    track_id,
+    user_id,
+    year_month,
+    amount_yen: 30,
+    payment_id: pi.id,
+  })
+
+  const { data: track } = await supabase.from('tracks').select('artist_id').eq('id', track_id).single()
+  if (!track) return
+
+  // ブースト課金は月額プール按分を経由せず、アーティストへ直接送金（投げ銭と同方式）
+  await supabase.rpc('add_artist_balance', {
+    p_artist_id: track.artist_id,
+    p_amount: 30 * BOOST_ARTIST_SHARE,
   })
 }

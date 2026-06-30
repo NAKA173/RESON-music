@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { BoostButton } from './BoostButton'
 
 interface Track {
   id: string
@@ -144,6 +145,11 @@ export function Player({ track, onEnded }: PlayerProps) {
       {/* プログレス表示 */}
       <div className="w-full bg-zinc-800 rounded-full h-0.5">
         <div className="bg-white h-0.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
+
+      {/* ブーストハート */}
+      <div className="flex justify-center">
+        <BoostButton trackId={track.id} />
       </div>
     </div>
   )

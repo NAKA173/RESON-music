@@ -135,6 +135,11 @@ function PricingContent() {
             再生時間・応援率・完聴率から「熱量スコア」を算出し、スコア比率で按分します。
             再生数ではなく<strong className="text-white">熱量</strong>で分配するため、インディーズアーティストが有利です。
           </p>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            応援率には❤️・投げ銭に加え、ブーストハート🚀（月3回まで無料・以降1回30円・月23回上限）が
+            <strong className="text-white">重み2倍</strong>で反映されます。ブーストの追加課金分（30円）は
+            プール按分を経由せず、ブーストしたアーティストへ直接70%（21円）が渡ります。
+          </p>
           <table className="w-full text-sm text-zinc-400 border-collapse">
             <thead>
               <tr className="border-b border-zinc-800">

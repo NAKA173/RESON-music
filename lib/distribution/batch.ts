@@ -65,8 +65,22 @@ export async function runMonthlyDistribution(
   }
   const supports = [...supportCounts.entries()].map(([track_id, count]) => ({ track_id, count }))
 
+  // ブーストハート数を集計（応援度スコアへ重み2倍で反映）
+  const { data: boostsData } = await supabase
+    .from('boost_hearts')
+    .select('track_id')
+    .in('track_id', [...eligibleTrackIds])
+    .gte('created_at', from)
+    .lt('created_at', to)
+
+  const boostCounts = new Map<string, number>()
+  for (const b of boostsData ?? []) {
+    boostCounts.set(b.track_id, (boostCounts.get(b.track_id) ?? 0) + 1)
+  }
+  const boosts = [...boostCounts.entries()].map(([track_id, count]) => ({ track_id, count }))
+
   // 熱量スコア計算
-  const scores = calcTrackScores(eligibleEvents, supports, trackMeta)
+  const scores = calcTrackScores(eligibleEvents, supports, trackMeta, boosts)
   if (scores.length === 0) return { distributed: 0 }
 
   // 月次プール計算（ユーザー数 × プラン別寄与額）

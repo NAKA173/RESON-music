@@ -70,6 +70,20 @@ describe('calcTrackScores', () => {
     expect(score.raw_score).toBeCloseTo(expected)
   })
 
+  test('boost_heartsは応援度スコアへ重み2倍で反映される', () => {
+    const events: PlayEventRow[] = [
+      { track_id: 'track-A', weight: 1.0, sec_factor: 1.0, completed: false },
+      { track_id: 'track-A', weight: 1.0, sec_factor: 1.0, completed: false },
+      { track_id: 'track-A', weight: 1.0, sec_factor: 1.0, completed: false },
+      { track_id: 'track-A', weight: 1.0, sec_factor: 1.0, completed: false },
+    ]
+    const boosts = [{ track_id: 'track-A', count: 1 }]
+    const result = calcTrackScores(events, [], tracks, boosts)
+    const score = result.find((s) => s.track_id === 'track-A')!
+    // boostCount(1) × 2.0 / valid(4) = 0.5
+    expect(score.support_rate).toBeCloseTo(0.5)
+  })
+
   test('track_id に対応する artist_id がない場合はスキップ', () => {
     const events: PlayEventRow[] = [
       { track_id: 'unknown-track', weight: 1.0, sec_factor: 1.0, completed: false },

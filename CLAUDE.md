@@ -109,6 +109,17 @@ supports (
   created_at timestamptz
 )
 
+-- ブーストハート🚀（応援表明の多層化・v3.4第8章）
+boost_hearts (
+  id uuid PK,
+  track_id uuid REFERENCES tracks(id),
+  user_id uuid REFERENCES users(id),
+  year_month text,                -- "2026-07"
+  amount_yen int DEFAULT 0,       -- 0=無料分、30=追加課金分
+  payment_id text,
+  created_at timestamptz
+)
+
 -- 月次分配
 monthly_distributions (
   id uuid PK,
@@ -175,7 +186,7 @@ fraud_flags (
 
 熱量スコア（月次バッチで算出）：
   play_time_score    = SUM(played_sec × weight × sec_factor) / 3600
-  support_rate       = COUNT(supports) / COUNT(play_events) WHERE sec_factor > 0
+  support_rate       = (COUNT(supports) + COUNT(boost_hearts) × 2.0) / COUNT(play_events) WHERE sec_factor > 0
   completion_rate    = COUNT(completed=true) / COUNT(play_events) WHERE sec_factor > 0
 
   raw_score = (play_time_score × 0.4)
@@ -214,6 +225,28 @@ Support+の実装：
 
 注意：投げ銭最低金額は100円（50円は現状Stripe最低手数料120円で赤字になるため）
 将来的に独自ウォレット方式への移行を検討（資金決済法の確認が必要）
+```
+
+---
+
+## ブーストハート🚀（v3.4第8章）
+
+```
+3層構造：
+  ①❤️（いいね）   無制限・無料・応援度スコアへの影響は軽微
+  ②ブーストハート 月3回まで無料／以降1回30円・月23回上限・重み2倍で応援度スコアに反映
+  ③投げ銭         無制限（最低100円）・応援度スコアに反映
+
+月間上限：月3回無料 + 月20回まで追加課金 = 月23回（課金力でスコアを支配させないための天井）
+
+追加ブースト（30円）の分配：
+  アーティスト直接受取：21円（70%）— プール按分を経由せず直接送金（投げ銭と同方式）
+  運営取得：9円（30%）— 投げ銭より運営取得率を高くする（金銭支援ではなくスコア影響力の購入のため）
+
+注意：Stripeの実用上の最低決済額（JPY 50円）と30円という単価には実装上の懸念が残る（要検証・本番導入前に解決必須）
+
+UIの分離：❤️ボタンとブーストボタン（ロケットモチーフ🚀）は視覚的に完全に別物として実装する
+週間ブーストランキング：絶対数ではなく先週比の伸び率ベース（累計再生数500未満の楽曲は対象外）— 未実装
 ```
 
 ---
@@ -320,6 +353,7 @@ Support+: 1,000円  高音質・応援ボーナス
   - [x] 多層ジャンルタグ
   - [x] 紹介制（招待リンク・特典なし。Phase 4の「招待リクエスト機能」とは別物）
   - [x] SNSレイヤー基本機能（フォロー・投稿・コメント・いいね・通知。v3.4第9章。コミュニティ・ライブ情報・音楽人格は未実装）
+  - [x] ブーストハート🚀（月3回無料+課金20回・重み2倍・直接70%送金。v3.4第8章。週間伸び率ランキングは未実装）
 
 - [ ] **Phase 3**（6〜8ヶ月）学生・決済拡張
   - [ ] Studentプラン + .ed.jp認証
