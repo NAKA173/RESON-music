@@ -1,51 +1,42 @@
-import { stripe } from '@/lib/stripe'
+import { paymentProvider, WebhookVerificationError } from '@/lib/payment'
 import { createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import type Stripe from 'stripe'
 
-// Stripe webhook は冪等に実装（同一イベントが複数回届く前提）
+// Webhook は冪等に実装（同一イベントが複数回届く前提）。プロバイダ依存の検証/正規化はlib/payment層に集約
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
 
-  if (!sig) {
-    return NextResponse.json({ error: 'No signature' }, { status: 400 })
-  }
-
-  let event: Stripe.Event
+  let normalized
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
-  } catch {
-    return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
+    normalized = paymentProvider.verifyAndNormalizeWebhook(body, sig)
+  } catch (e) {
+    if (e instanceof WebhookVerificationError) {
+      return NextResponse.json({ error: e.message }, { status: 400 })
+    }
+    throw e
   }
 
   const supabase = await createServiceClient()
 
-  switch (event.type) {
-    case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session
-      await handleCheckoutCompleted(supabase, session)
+  switch (normalized.kind) {
+    case 'checkout_completed':
+      await handleCheckoutCompleted(supabase, normalized.userId, normalized.plan)
       break
-    }
-    case 'customer.subscription.updated': {
-      const sub = event.data.object as Stripe.Subscription
-      await handleSubscriptionUpdated(supabase, sub)
+    case 'subscription_updated':
+      await handleSubscriptionUpdated(supabase, normalized.userId, normalized.plan, normalized.active)
       break
-    }
-    case 'customer.subscription.deleted': {
-      const sub = event.data.object as Stripe.Subscription
-      await handleSubscriptionDeleted(supabase, sub)
+    case 'subscription_deleted':
+      await handleSubscriptionDeleted(supabase, normalized.userId)
       break
-    }
-    case 'payment_intent.succeeded': {
-      const pi = event.data.object as Stripe.PaymentIntent
-      if (pi.metadata?.type === 'boost') {
-        await handleBoostSucceeded(supabase, pi)
+    case 'charge_succeeded':
+      if (normalized.metadata.type === 'boost') {
+        await handleBoostSucceeded(supabase, normalized.providerChargeId, normalized.metadata)
       } else {
-        await handleTipSucceeded(supabase, pi)
+        await handleTipSucceeded(supabase, normalized.providerChargeId, normalized.metadata)
       }
       break
-    }
+    case 'ignored':
     default:
       // 未処理イベントは無視（200を返して再送させない）
       break
@@ -56,12 +47,9 @@ export async function POST(req: NextRequest) {
 
 async function handleCheckoutCompleted(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
-  session: Stripe.Checkout.Session
+  userId: string,
+  plan: string
 ) {
-  const userId = session.metadata?.supabase_user_id
-  const plan = session.metadata?.plan
-  if (!userId || !plan) return
-
   await supabase
     .from('users')
     .update({ plan })
@@ -70,15 +58,12 @@ async function handleCheckoutCompleted(
 
 async function handleSubscriptionUpdated(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
-  sub: Stripe.Subscription
+  userId: string,
+  plan: string,
+  active: boolean
 ) {
-  const userId = sub.metadata?.supabase_user_id
-  const plan = sub.metadata?.plan
-  if (!userId || !plan) return
-
-  const status = sub.status
   // active / trialing のみプランを維持。それ以外は free に戻す
-  const newPlan = (status === 'active' || status === 'trialing') ? plan : 'free'
+  const newPlan = active ? plan : 'free'
 
   await supabase
     .from('users')
@@ -88,11 +73,8 @@ async function handleSubscriptionUpdated(
 
 async function handleSubscriptionDeleted(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
-  sub: Stripe.Subscription
+  userId: string
 ) {
-  const userId = sub.metadata?.supabase_user_id
-  if (!userId) return
-
   await supabase
     .from('users')
     .update({ plan: 'free' })
@@ -101,16 +83,17 @@ async function handleSubscriptionDeleted(
 
 async function handleTipSucceeded(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
-  pi: Stripe.PaymentIntent
+  providerChargeId: string,
+  metadata: Record<string, string>
 ) {
-  const { track_id, user_id, net_yen } = pi.metadata ?? {}
+  const { track_id, user_id, net_yen } = metadata
   if (!track_id || !user_id || !net_yen) return
 
   // 冪等: payment_id で重複チェック
   const { data: existing } = await supabase
     .from('supports')
     .select('id')
-    .eq('payment_id', pi.id)
+    .eq('payment_id', providerChargeId)
     .single()
   if (existing) return
 
@@ -118,7 +101,7 @@ async function handleTipSucceeded(
     track_id,
     user_id,
     amount_yen: Number(net_yen),
-    payment_id: pi.id,
+    payment_id: providerChargeId,
   })
 }
 
@@ -126,16 +109,17 @@ const BOOST_ARTIST_SHARE = 0.7 // 21円（70%）。残り30%は運営取得（�
 
 async function handleBoostSucceeded(
   supabase: Awaited<ReturnType<typeof createServiceClient>>,
-  pi: Stripe.PaymentIntent
+  providerChargeId: string,
+  metadata: Record<string, string>
 ) {
-  const { track_id, user_id, year_month } = pi.metadata ?? {}
+  const { track_id, user_id, year_month } = metadata
   if (!track_id || !user_id || !year_month) return
 
   // 冪等: payment_id で重複チェック
   const { data: existing } = await supabase
     .from('boost_hearts')
     .select('id')
-    .eq('payment_id', pi.id)
+    .eq('payment_id', providerChargeId)
     .single()
   if (existing) return
 
@@ -144,7 +128,7 @@ async function handleBoostSucceeded(
     user_id,
     year_month,
     amount_yen: 30,
-    payment_id: pi.id,
+    payment_id: providerChargeId,
   })
 
   const { data: track } = await supabase.from('tracks').select('artist_id').eq('id', track_id).single()

@@ -251,6 +251,42 @@ UIの分離：❤️ボタンとブーストボタン（ロケットモチーフ
 
 ---
 
+## PaymentProvider抽象化レイヤー（v3.4第3章）
+
+```
+目的：決済業者依存のAPI呼び出し（Stripe SDK等）をビジネスロジックから切り離し、
+      将来的に他社決済（SBPayment / PayPay等）を追加する際にアプリケーションコード
+      （投げ銭・ブースト・サブスク・分配処理）を変更不要にする。
+
+構成：
+  lib/payment/types.ts             共通インターフェース PaymentProvider と関連型を定義
+  lib/payment/providers/stripe.ts  StripeAdapter（PaymentProviderの唯一の実装・現状）
+  lib/payment/index.ts             paymentProvider シングルトンのエクスポート
+
+PaymentProvider interface:
+  createCustomer / createOneTimeCharge / createSubscriptionCheckout /
+  createBillingPortalSession / verifyAndNormalizeWebhook
+
+  verifyAndNormalizeWebhook は業者ごとに異なるWebhook形式・署名検証ロジックを
+  この層に閉じ込め、NormalizedWebhookEvent（共通フォーマット）に変換する。
+  呼び出し側（app/api/stripe/webhook/route.ts）は正規化後のkindのみで分岐する。
+
+フェーズ方針（β版・初月）：Stripeアダプターのみ実装。抽象化レイヤーは作るが
+  SBPayment/PayPay等の他アダプターは未実装（spec記載の段階導入方針に準拠）。
+
+DB拡張：supports / boost_hearts に payment_provider カラムを追加（default 'stripe'）。
+  既存の payment_id カラムは provider_charge_id 相当としてそのまま使用（リネームなし）。
+
+適用済み呼び出し元：
+  app/api/supports/route.ts        投げ銭PaymentIntent作成
+  app/api/boost/route.ts           追加ブーストPaymentIntent作成
+  app/api/stripe/checkout/route.ts サブスクCheckout・顧客作成
+  app/api/stripe/portal/route.ts   ビリングポータル
+  app/api/stripe/webhook/route.ts  Webhook検証・正規化・分岐
+```
+
+---
+
 ## 料金プラン
 
 ```
@@ -343,6 +379,7 @@ Support+: 1,000円  高音質・応援ボーナス
   - [x] AcoustID重複検知
   - [x] AI生成タグ強制付与フロー
   - [x] Support+月間蓄積投げ銭精算
+  - [x] PaymentProvider抽象化レイヤー（Stripeアダプターのみ実装。他社決済は未実装・v3.4第3章）
 
 - [ ] **Phase 2**（4〜6ヶ月）発見性
   - [ ] 文脈検索（Claude Haiku + pgvector）

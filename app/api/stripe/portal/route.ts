@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe'
+import { paymentProvider } from '@/lib/payment'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -22,10 +22,10 @@ export async function POST(req: NextRequest) {
 
   const origin = req.headers.get('origin') ?? 'http://localhost:3000'
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${origin}/pricing`,
+  const { url } = await paymentProvider.createBillingPortalSession({
+    customerId,
+    returnUrl: `${origin}/pricing`,
   })
 
-  return NextResponse.json({ url: session.url })
+  return NextResponse.json({ url })
 }

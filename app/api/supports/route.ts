@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe'
+import { paymentProvider } from '@/lib/payment'
 import { NextRequest, NextResponse } from 'next/server'
 import type { UserPlan } from '@/lib/distribution'
 
@@ -76,18 +76,16 @@ export async function POST(req: NextRequest) {
 
   const customerId = (userData as { stripe_customer_id?: string })?.stripe_customer_id
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: chargeYen,
-    currency: 'jpy',
-    customer: customerId ?? undefined,
+  const { clientSecret } = await paymentProvider.createOneTimeCharge({
+    amountYen: chargeYen,
+    customerId: customerId ?? undefined,
     metadata: { track_id, user_id: user.id, plan, net_yen: String(amount_yen) },
-    automatic_payment_methods: { enabled: true },
   })
 
   return NextResponse.json({
     ok: true,
     type: 'tip',
-    client_secret: paymentIntent.client_secret,
+    client_secret: clientSecret,
     charge_yen: chargeYen,
     net_yen: amount_yen,
     fee_rate: feeRate,

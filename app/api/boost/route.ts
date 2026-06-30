@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe'
+import { paymentProvider } from '@/lib/payment'
 import { NextRequest, NextResponse } from 'next/server'
 
 const FREE_BOOSTS_PER_MONTH = 3
@@ -84,18 +84,16 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single()
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: BOOST_PRICE_YEN,
-    currency: 'jpy',
-    customer: (userData as { stripe_customer_id?: string })?.stripe_customer_id ?? undefined,
+  const { clientSecret } = await paymentProvider.createOneTimeCharge({
+    amountYen: BOOST_PRICE_YEN,
+    customerId: (userData as { stripe_customer_id?: string })?.stripe_customer_id ?? undefined,
     metadata: { type: 'boost', track_id, user_id: user.id, year_month: yearMonth },
-    automatic_payment_methods: { enabled: true },
   })
 
   return NextResponse.json({
     ok: true,
     type: 'paid',
-    client_secret: paymentIntent.client_secret,
+    client_secret: clientSecret,
     price_yen: BOOST_PRICE_YEN,
   })
 }

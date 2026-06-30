@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { stripe, PLAN_PRICE_IDS } from '@/lib/stripe'
+import { PLAN_PRICE_IDS } from '@/lib/stripe'
+import { paymentProvider } from '@/lib/payment'
 import { NextRequest, NextResponse } from 'next/server'
 import type { PlanId } from '@/lib/stripe'
 
@@ -44,10 +45,10 @@ export async function POST(req: NextRequest) {
   let customerId = (userData as { stripe_customer_id?: string })?.stripe_customer_id
 
   if (!customerId) {
-    const customer = await stripe.customers.create({
+    const { customerId: newCustomerId } = await paymentProvider.createCustomer({
       metadata: { supabase_user_id: user.id },
     })
-    customerId = customer.id
+    customerId = newCustomerId
     await supabase
       .from('users')
       .update({ stripe_customer_id: customerId } as never)
@@ -56,18 +57,13 @@ export async function POST(req: NextRequest) {
 
   const origin = req.headers.get('origin') ?? 'http://localhost:3000'
 
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [{ price: PLAN_PRICE_IDS[plan], quantity: 1 }],
-    success_url: `${origin}/pricing?success=1`,
-    cancel_url: `${origin}/pricing`,
+  const { url } = await paymentProvider.createSubscriptionCheckout({
+    customerId,
+    priceId: PLAN_PRICE_IDS[plan],
+    successUrl: `${origin}/pricing?success=1`,
+    cancelUrl: `${origin}/pricing`,
     metadata: { supabase_user_id: user.id, plan },
-    subscription_data: {
-      metadata: { supabase_user_id: user.id, plan },
-    },
   })
 
-  return NextResponse.json({ url: session.url })
+  return NextResponse.json({ url })
 }
