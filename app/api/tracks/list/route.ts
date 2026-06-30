@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
+  const q = req.nextUrl.searchParams.get('q')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('tracks')
     .select(`
       id,
@@ -12,10 +13,17 @@ export async function GET() {
       duration_sec,
       ai_generated,
       cumulative_plays,
+      album_id,
       artists ( id, name )
     `)
     .order('created_at', { ascending: false })
     .limit(50)
+
+  if (q) {
+    query = query.ilike('title', `%${q}%`)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })

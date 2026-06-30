@@ -76,6 +76,27 @@ tracks (
   created_at timestamptz
 )
 
+-- アルバム（楽曲のまとまり。アーティスト本人が任意で作成・楽曲に紐付ける）
+albums (
+  id uuid PK,
+  artist_id uuid REFERENCES artists(id),
+  title text,
+  cover_url text,
+  released_at date,
+  created_at timestamptz
+)
+-- tracks.album_id uuid REFERENCES albums(id)  -- nullable（シングルはアルバム未紐付け）
+
+-- ベストトラックランキング（Topster風プロフィール・自己申告のお気に入り楽曲ランキング・最大10曲）
+best_tracks (
+  user_id uuid REFERENCES users(id),
+  rank int CHECK (rank BETWEEN 1 AND 10),
+  track_id uuid REFERENCES tracks(id),
+  created_at timestamptz,
+  PRIMARY KEY (user_id, rank),
+  UNIQUE (user_id, track_id)
+)
+
 -- 共同楽曲の分配設定
 track_splits (
   id uuid PK,
@@ -424,6 +445,7 @@ Support+: 1,000円  高音質・応援ボーナス
   - [x] 紹介制（招待リンク・特典なし。Phase 4の「招待リクエスト機能」とは別物）
   - [x] SNSレイヤー基本機能（フォロー・投稿・コメント・いいね・通知。v3.4第9章）
   - [x] ジャンル別コミュニティ・ライブ情報・音楽人格・ブロック/通報（v3.4第9章。詳細は下記「SNS拡張機能」節）
+  - [x] アルバム概念・ベストトラックランキング（Topster風プロフィール。詳細は下記「アルバム・Topster」節）
   - [x] ブーストハート🚀（月3回無料+課金20回・重み2倍・直接70%送金。v3.4第8章。週間伸び率ランキングは未実装）
 
 - [ ] **Phase 3**（6〜8ヶ月）学生・決済拡張
@@ -486,6 +508,28 @@ RLS：supabase/migrations/20260016_community_event_profile_safety.sql に
   community_members / events / event_attendees / user_profiles / blocks /
   reports の全テーブルのRLSを定義（公開読み取り系は public_read、
   本人操作系は auth.uid() 比較）。
+```
+
+---
+
+## アルバム・Topster（Phase 2）
+
+```
+アルバム：
+  albums（アーティスト本人が任意で作成）。tracks.album_id で楽曲を紐付ける（nullable・
+  未紐付けはシングル扱い）。
+  API: app/api/albums/route.ts（GET一覧・?artist_id= or ?mine=true・POST作成＝アーティスト本人のみ）
+       app/api/tracks/[trackId]/route.ts（PATCH album_id＝楽曲の所有アーティスト本人のみ。
+       アルバムも同一アーティスト所有であることを確認）
+       app/api/tracks/upload-url/route.ts はアップロード時にも album_id を任意で受け付ける
+  UI:  app/(artist)/upload/page.tsx にアルバム選択/新規作成フォームを追加
+
+ベストトラックランキング（Topster風プロフィール）：
+  best_tracks（user_id, rank 1-10, track_id）。アルバム単位ではなく楽曲単位でランクインする
+  自己申告のお気に入りランキング（聴取データからの自動算出ではない）。
+  API: app/api/best-tracks/route.ts（GET自分or?user_id=他人・PUT＝track_ids配列で全件入れ替え）
+  UI:  app/(player)/profile/page.tsx に楽曲検索→追加→並べ替え（▲▼）→保存のUIを追加
+  app/api/tracks/list は ?q= でのタイトル検索に対応（Topsterの楽曲検索用）
 ```
 
 ---

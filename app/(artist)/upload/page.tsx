@@ -13,6 +13,11 @@ interface Genre {
   parent_id: string | null
 }
 
+interface Album {
+  id: string
+  title: string
+}
+
 export default function UploadPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -26,12 +31,39 @@ export default function UploadPage() {
   const [aiWarning, setAiWarning] = useState('')
   const [genres, setGenres] = useState<Genre[]>([])
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([])
+  const [albums, setAlbums] = useState<Album[]>([])
+  const [albumId, setAlbumId] = useState('')
+  const [newAlbumTitle, setNewAlbumTitle] = useState('')
+  const [creatingAlbum, setCreatingAlbum] = useState(false)
 
   useEffect(() => {
     fetch('/api/genres')
       .then((r) => r.json())
       .then((d) => setGenres(d.genres ?? []))
+    loadAlbums()
   }, [])
+
+  function loadAlbums() {
+    fetch('/api/albums?mine=true')
+      .then((r) => r.json())
+      .then((d) => setAlbums(d.albums ?? []))
+  }
+
+  async function createAlbum() {
+    if (!newAlbumTitle.trim()) return
+    setCreatingAlbum(true)
+    const res = await fetch('/api/albums', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newAlbumTitle }),
+    })
+    const data = await res.json()
+    setCreatingAlbum(false)
+    if (!res.ok) { setError(data.error); return }
+    setNewAlbumTitle('')
+    loadAlbums()
+    setAlbumId(data.album.id)
+  }
 
   function toggleGenre(id: string) {
     setSelectedGenreIds((prev) => {
@@ -96,6 +128,7 @@ export default function UploadPage() {
         duration_sec,
         ai_generated: aiGenerated,
         genre_ids: selectedGenreIds,
+        album_id: albumId || undefined,
       }),
     })
     const meta = await metaRes.json()
@@ -242,6 +275,39 @@ export default function UploadPage() {
               </div>
             </div>
           )}
+
+          {/* アルバム */}
+          <div>
+            <label className="block text-sm text-zinc-400 mb-2">アルバム（任意）</label>
+            <select
+              value={albumId}
+              onChange={(e) => setAlbumId(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
+            >
+              <option value="">アルバムなし（シングル）</option>
+              {albums.map((a) => (
+                <option key={a.id} value={a.id}>{a.title}</option>
+              ))}
+            </select>
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                value={newAlbumTitle}
+                onChange={(e) => setNewAlbumTitle(e.target.value)}
+                maxLength={200}
+                placeholder="新しいアルバム名"
+                className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+              />
+              <button
+                type="button"
+                onClick={createAlbum}
+                disabled={creatingAlbum || !newAlbumTitle.trim()}
+                className="shrink-0 rounded-lg border border-zinc-700 px-3 py-2 text-sm hover:border-zinc-400 disabled:opacity-40"
+              >
+                {creatingAlbum ? '作成中…' : 'アルバムを作成'}
+              </button>
+            </div>
+          </div>
 
           {/* AI生成フラグ */}
           <label className="flex items-center gap-3 cursor-pointer">
