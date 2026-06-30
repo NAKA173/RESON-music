@@ -14,7 +14,7 @@ interface Track {
 }
 
 const navItems = [
-  { href: '/', label: 'ホーム', icon: '⌂' },
+  { href: '/home', label: 'ホーム', icon: '⌂' },
   { href: '/search', label: 'さがす', icon: '⌕' },
   { href: '/explore', label: '探索', icon: '◎' },
 ]

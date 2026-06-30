@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  serverExternalPackages: ['stripe'],
-};
+const isStaticPreview = process.env.STATIC_PREVIEW === "true";
+
+const nextConfig: NextConfig = isStaticPreview
+  ? {
+      output: "export",
+      basePath: "/RESON-music",
+      images: { unoptimized: true },
+    }
+  : {
+      serverExternalPackages: ["stripe"],
+    };
 
 export default nextConfig;
