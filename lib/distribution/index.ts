@@ -1,5 +1,6 @@
 export { calcWeight, calcSecFactor, POOL_CONTRIBUTION, TIP_FEE_RATE } from './weights'
 export { calcTrackScores, calcDistribution } from './score'
+export { rankTracksByHeat } from './recommend'
 export type {
   UserPlan,
   PlayEvent,

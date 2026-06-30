@@ -13,6 +13,12 @@ interface Track {
   artists: { id: string; name: string } | null
 }
 
+interface HeatTrack extends Track {
+  completion_rate: number
+  support_rate: number
+  heat_score: number
+}
+
 const navItems = [
   { href: '/home', label: 'ホーム', icon: '⌂' },
   { href: '/search', label: 'さがす', icon: '⌕' },
@@ -34,6 +40,7 @@ const explore = [
 
 export default function PlayerPage() {
   const [tracks, setTracks] = useState<Track[]>([])
+  const [heatTracks, setHeatTracks] = useState<HeatTrack[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -44,10 +51,12 @@ export default function PlayerPage() {
         setTracks(d.tracks ?? [])
         setLoading(false)
       })
+    fetch('/api/recommendations/heat')
+      .then((r) => r.json())
+      .then((d) => setHeatTracks(d.tracks ?? []))
   }, [])
 
   const current = tracks[currentIdx] ?? null
-  const heatTracks = tracks.slice(0, 8)
 
   return (
     <div className="flex min-h-screen bg-[var(--bg)] text-[var(--text)]">
@@ -122,11 +131,17 @@ export default function PlayerPage() {
           {heatTracks.length > 0 && (
             <section>
               <h2 className="font-display text-lg font-bold">熱量が高まっている楽曲</h2>
+              <p className="mt-1 text-xs text-[var(--faint)]">
+                直近14日間の再生時間・応援率・完聴率から算出した熱量スコアが高い順
+              </p>
               <div className="scroll-x mt-4 gap-4 pb-2">
                 {heatTracks.map((t, i) => (
                   <button
                     key={t.id}
-                    onClick={() => setCurrentIdx(tracks.indexOf(t))}
+                    onClick={() => {
+                      const idx = tracks.findIndex((tr) => tr.id === t.id)
+                      if (idx >= 0) setCurrentIdx(idx)
+                    }}
                     className="flex w-40 shrink-0 flex-col rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)]"
                   >
                     <span
@@ -136,7 +151,7 @@ export default function PlayerPage() {
                     <p className="mt-3 truncate text-sm font-medium">{t.title}</p>
                     <p className="truncate text-xs text-[var(--dim)]">{t.artists?.name ?? '不明'}</p>
                     <p className="mt-1 text-xs text-[var(--faint)]">
-                      {t.cumulative_plays}回再生
+                      完聴率 {Math.round(t.completion_rate * 100)}% ・ 応援率 {Math.round(t.support_rate * 100)}%
                       {t.ai_generated && <span className="ml-2 text-yellow-500">AI</span>}
                     </p>
                   </button>
