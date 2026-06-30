@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { UserPlan } from '@/lib/distribution'
 
 const TIP_FEE_RATE: Record<UserPlan, number> = {
-  free: 0.15,
+  free: 0.10,
   standard: 0.08,
   student: 0.06,
   support_plus: 0, // 月末一括で別処理

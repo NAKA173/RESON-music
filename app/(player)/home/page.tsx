@@ -27,6 +27,7 @@ const navItems = [
   { href: '/home', label: 'ホーム', icon: '⌂' },
   { href: '/search', label: 'さがす', icon: '⌕' },
   { href: '/explore', label: '探索', icon: '◎' },
+  { href: '/feed', label: 'フィード', icon: '✎' },
 ]
 
 const artists = [
