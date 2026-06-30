@@ -101,6 +101,12 @@ export default function PlayerPage() {
           <p className="mt-1 text-xs text-[var(--dim)]">楽曲をアップロードして配信を始める</p>
         </Link>
         <Link
+          href="/invite"
+          className="mt-3 text-xs text-[var(--faint)] hover:text-[var(--dim)]"
+        >
+          友人を招待する →
+        </Link>
+        <Link
           href="/dashboard"
           className="mt-auto text-xs text-[var(--faint)] hover:text-[var(--dim)]"
         >

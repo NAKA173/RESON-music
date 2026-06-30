@@ -229,8 +229,11 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* 計算式の透明性リンク */}
-        <p className="text-center text-xs text-zinc-600">
+        {/* 紹介・透明性リンク */}
+        <p className="text-center text-xs text-zinc-600 space-x-4">
+          <Link href="/invite" className="hover:text-zinc-400 underline">
+            友人を招待する
+          </Link>
           <Link href="/pricing" className="hover:text-zinc-400 underline">
             分配計算式はこちらで公開しています
           </Link>

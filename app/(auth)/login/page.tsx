@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -11,6 +11,11 @@ export default function LoginPage() {
   const [otp, setOtp] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get('ref')
+    if (ref) sessionStorage.setItem('reson_ref', ref)
+  }, [])
 
   async function sendOtp(e: React.FormEvent) {
     e.preventDefault()
@@ -31,14 +36,16 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+    const ref = sessionStorage.getItem('reson_ref')
     const res = await fetch('/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, token: otp }),
+      body: JSON.stringify({ phone, token: otp, ref }),
     })
     const data = await res.json()
     setLoading(false)
     if (!res.ok) { setError(data.error); return }
+    sessionStorage.removeItem('reson_ref')
     router.push('/dashboard')
   }
 
