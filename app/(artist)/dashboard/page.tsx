@@ -29,15 +29,41 @@ interface ReportData {
   tracks: Track[]
 }
 
+interface PayoutRequest {
+  id: string
+  amount_yen: number
+  status: 'pending' | 'paid' | 'rejected'
+  requested_at: string
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([])
+  const [payoutError, setPayoutError] = useState('')
+  const [payoutLoading, setPayoutLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/artist/report')
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false) })
+    fetch('/api/payout/request')
+      .then((r) => (r.ok ? r.json() : { requests: [] }))
+      .then((d) => setPayoutRequests(d.requests ?? []))
   }, [])
+
+  async function requestPayout() {
+    setPayoutError('')
+    setPayoutLoading(true)
+    const res = await fetch('/api/payout/request', { method: 'POST' })
+    const body = await res.json()
+    setPayoutLoading(false)
+    if (!res.ok) {
+      setPayoutError(body.error)
+      return
+    }
+    setPayoutRequests((prev) => [body.request, ...prev])
+  }
 
   if (loading) {
     return (
@@ -91,6 +117,36 @@ export default function DashboardPage() {
           )}
           {data.balance.balance_yen >= 50000 && (
             <p className="text-xs text-yellow-500 mt-2">⚠️ 残高が50,000円を超えています。出金申請を行ってください。</p>
+          )}
+
+          {payoutError && (
+            <p className="text-xs text-red-400 mt-3">{payoutError}</p>
+          )}
+
+          {payoutRequests.some((r) => r.status === 'pending') ? (
+            <p className="text-xs text-zinc-500 mt-3">出金申請受付済み（処理中）</p>
+          ) : (
+            <button
+              onClick={requestPayout}
+              disabled={data.balance.balance_yen < 1000 || payoutLoading}
+              className="mt-3 text-sm bg-white text-black px-4 py-2 rounded-lg font-semibold hover:bg-zinc-200 disabled:opacity-40 transition"
+            >
+              {payoutLoading ? '申請中…' : '出金申請'}
+            </button>
+          )}
+
+          {payoutRequests.length > 0 && (
+            <div className="mt-4 space-y-1.5 border-t border-zinc-800 pt-3">
+              {payoutRequests.slice(0, 5).map((r) => (
+                <div key={r.id} className="flex justify-between text-xs text-zinc-500">
+                  <span>{new Date(r.requested_at).toLocaleDateString('ja-JP')}</span>
+                  <span>¥{Math.floor(r.amount_yen).toLocaleString()}</span>
+                  <span>
+                    {r.status === 'pending' ? '処理中' : r.status === 'paid' ? '支払済' : '却下'}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

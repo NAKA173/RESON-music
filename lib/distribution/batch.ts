@@ -13,14 +13,26 @@ export async function runMonthlyDistribution(
   // 分配対象楽曲（cumulative_plays >= 100）の play_events を取得
   const { data: events, error: evErr } = await supabase
     .from('play_events')
-    .select('track_id, weight, sec_factor, completed')
+    .select('track_id, user_id, weight, sec_factor, completed')
     .gte('created_at', from)
     .lt('created_at', to)
 
   if (evErr) throw new Error(`play_events fetch failed: ${evErr.message}`)
 
+  // 不正検知フラグ（未解決）が立っている track_id × user_id の組は分配計算から除外する
+  const { data: flags } = await supabase
+    .from('fraud_flags')
+    .select('track_id, user_id')
+    .eq('resolved', false)
+
+  const flaggedPairs = new Set((flags ?? []).map((f: { track_id: string; user_id: string }) => `${f.track_id}:${f.user_id}`))
+
+  const cleanEvents = (events ?? []).filter(
+    (e: { track_id: string; user_id: string }) => !flaggedPairs.has(`${e.track_id}:${e.user_id}`)
+  )
+
   // 対象 track_id を in_distribution = true のもので絞り込む
-  const trackIds = [...new Set((events ?? []).map((e: { track_id: string }) => e.track_id))]
+  const trackIds = [...new Set(cleanEvents.map((e: { track_id: string }) => e.track_id))]
   if (trackIds.length === 0) return { distributed: 0 }
 
   const { data: tracksData } = await supabase
@@ -35,7 +47,7 @@ export async function runMonthlyDistribution(
     artist_id: t.artist_id,
   }))
 
-  const eligibleEvents: PlayEventRow[] = (events ?? []).filter(
+  const eligibleEvents: PlayEventRow[] = cleanEvents.filter(
     (e: { track_id: string }) => eligibleTrackIds.has(e.track_id)
   )
 
