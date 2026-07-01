@@ -50,6 +50,17 @@ users (
   created_at timestamptz
 )
 
+-- ペアレンタル決済の紐付けリクエスト（トークン方式・メール配信基盤未構築のため本人が
+-- リンクを保護者へ直接共有する運用。承認されると users.parent_user_id が設定される）
+parental_link_requests (
+  id uuid PK,
+  child_user_id uuid REFERENCES users(id),
+  token text UNIQUE,
+  status text DEFAULT 'pending', -- pending/approved/rejected
+  parent_user_id uuid REFERENCES users(id),
+  created_at timestamptz, resolved_at timestamptz
+)
+
 -- アーティスト
 artists (
   id uuid PK,
@@ -58,7 +69,23 @@ artists (
   bio text,
   verified_badge bool DEFAULT false,  -- 初回審査通過
   founding_artist bool DEFAULT false, -- 創設アーティスト
+  review_status text DEFAULT 'pending', -- pending/approved/rejected（本人確認相当の審査）
+  rights_confirmed bool DEFAULT false,
+  rights_confirmed_at timestamptz,
+  is_minor bool DEFAULT false,          -- 未成年アーティストの親権者同意フロー
+  parent_consent_name text,
+  parent_consent_contact text,
   created_at timestamptz
+)
+
+-- 出金先銀行口座
+artist_bank_accounts (
+  id uuid PK,
+  artist_id uuid REFERENCES artists(id) UNIQUE,
+  bank_name text, branch_name text,
+  account_type text CHECK (account_type IN ('ordinary','checking')),
+  account_number text, account_holder_name text,
+  created_at timestamptz, updated_at timestamptz
 )
 
 -- 楽曲
@@ -68,11 +95,15 @@ tracks (
   title text,
   duration_sec int,
   r2_key text,             -- Cloudflare R2のオブジェクトキー
+  cover_r2_key text,       -- ジャケット画像（任意）
   fingerprint text,        -- AcoustID
   ai_generated bool DEFAULT false,
   cumulative_plays int DEFAULT 0,
   in_distribution bool DEFAULT false,  -- 100再生超えたらtrue
+  review_status text DEFAULT 'pending', -- pending/approved/rejected（楽曲単位の配信審査）
+  reviewed_at timestamptz,
   registration_fee_paid bool DEFAULT false,
+  track_number int,        -- アルバム内の曲順（nullable）
   created_at timestamptz
 )
 
@@ -82,6 +113,7 @@ albums (
   artist_id uuid REFERENCES artists(id),
   title text,
   cover_url text,
+  release_type text DEFAULT 'album', -- single/ep/album
   released_at date,
   created_at timestamptz
 )
@@ -117,6 +149,7 @@ play_events (
   completed bool,            -- 最後まで聴いたか
   weight numeric,            -- user_planから算出した重み係数
   sec_factor numeric,        -- 再生秒数係数（0 / 0.5 / 1.0）
+  ip_address text,           -- 不正検知（同一IP大量再生）用
   created_at timestamptz
 )
 
@@ -461,10 +494,84 @@ RESON実装（楽曲単位の審査。アーティスト登録自体の審査＝
   app/api/artist/review・app/api/payout/process と同じ「管理UIなし・bearer tokenで
   手動運用」パターンを採用。
 
-未実装：ジャケット写真のアップロード（BIG UP!等は必須項目だが、RESONでは
-  albums.cover_url のみ存在し、シングル曲用の画像アップロードUIはまだない）。
-  不正コンテンツの判定基準（何を審査するか）は運営の目視確認を前提とし、システム上の
+楽曲ジャケット画像（BIG UP!等の必須項目に対応。任意項目として実装）：
+  tracks.cover_r2_key（R2オブジェクトキー）。アップロードは音声ファイルと同じ
+  署名付きURL方式（app/api/tracks/cover-upload-url、JPEG/PNG/WebPのみ許可）。
+  表示は app/api/tracks/[trackId]/cover が署名付きGET URLへ302リダイレクト
+  （音声ストリーミングと同じパターン）。app/(artist)/upload にアップロードUIを追加。
+
+不正コンテンツの判定基準（何を審査するか）は運営の目視確認を前提とし、システム上の
   自動判定ロジックは持たない。
+```
+
+---
+
+## シングル/EP/アルバムの区別・曲順・アルバム単位の再生（Phase 2）
+
+```
+albums.release_type（single/ep/album）：アルバム作成時に選択（app/(artist)/upload の
+  アルバム新規作成フォーム）。デフォルトは'album'。/api/albums のGET/POSTで受け渡し。
+
+tracks.track_number：アルバムに紐付けた楽曲の曲順（nullable・任意入力）。
+  アップロード時（/api/tracks/upload-url）・編集時（PATCH /api/tracks/[trackId]）
+  の両方でアルバム紐付けと同時に設定可能。album_idがnullの場合は常にnullへ強制。
+
+アルバム単位の再生機能：
+  API: app/api/albums/[albumId]/route.ts（GET・track_number順にソートした楽曲一覧
+    + 合計再生時間を返す。review_status='approved'の楽曲のみ含む）
+  UI: app/(player)/albums/page.tsx（?id=<albumId> のクエリパラメータで指定。
+    静的エクスポート時にdynamicルートのgenerateStaticParams制約を避けるため、
+    パスパラメータではなくクエリパラメータ方式を採用）
+    既存の components/Player を再利用し、アルバム内の楽曲を順に連続再生できる
+    （曲送りは既存のonEnded連鎖の仕組みをそのまま利用）。
+  ダッシュボードのアルバム一覧（app/(artist)/dashboard）から遷移可能。
+```
+
+---
+
+## ペアレンタル決済フロー（Phase 3・v3.4第9章）
+
+```
+既存の users.parent_user_id を実際に機能させる紐付けフロー。メール配信基盤が
+未構築のため、承認リンクは本人（未成年リスナー）が保護者に直接共有する運用。
+
+API:
+  app/api/parental/request（POST）  子がトークン付き承認リクエストを作成
+  app/api/parental/approve（POST）  保護者が自分のアカウントでログインした状態で
+    トークンを渡して承認/却下 → 承認時に対象ユーザーの parent_user_id を更新
+  app/api/parental/status（GET）    紐付け済みかどうか・保留中トークンを返す
+UI:
+  app/(player)/parental/page.tsx          子側：承認リンクの作成・共有
+  app/(player)/parental/approve/page.tsx  保護者側：トークンを開いて承認/却下
+
+決済への反映（app/api/stripe/checkout）：
+  ユーザーに parent_user_id が設定されている場合、Stripe顧客（決済手段）は
+  保護者側のものを使用/作成する。ただし checkout の metadata.supabase_user_id は
+  本人（子）のままにし、webhook経由でプランが付与されるのは本人のアカウント。
+  → 支払いは保護者のカードで行われるが、プランは子のアカウントに付与される。
+  保護者の users レコード読み書きは RLS（本人のみ）を回避するため service role
+  クライアントを使用（createServiceClient）。
+
+未検証：Stripe側で「保護者のカードで子のプランを継続課金する」ことについての
+  利用規約・カード会社側のポリシー上の懸念（本番導入前に確認が必要）。
+```
+
+---
+
+## 支援者感謝ページ（Phase 2・「感謝を返せる設計」の一部）
+
+```
+アーティストが自分を応援してくれたリスナー（❤️・投げ銭・ブースト）を一覧できる
+ページ。Support Graph（リスナー視点でフォロー中の人の応援を見る機能）とは逆方向の、
+アーティスト視点での支援者一覧。
+
+API: app/api/artist/supporters/route.ts（GET・本人のみ）
+  自分の全楽曲に対する supports・boost_hearts を user_id 単位で集計し、
+  ❤️回数・🚀回数・投げ銭合計額を算出。降順（🚀×30円 + 投げ銭合計）でソート。
+UI: app/(artist)/supporters/page.tsx（ダッシュボードからリンク）
+
+匿名リスナー（user_profiles未登録）は「名無しのリスナー」と表示。
+個別のお礼メッセージ送信機能は未実装（一覧表示のみ）。
 ```
 
 ---
@@ -515,6 +622,19 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   level 1（警告）：分配計算から除外・アーティストへ通知
   level 2（停止）：楽曲を一時非公開・異議申し立て案内
   level 3（BAN）：全楽曲非公開・審査後に判定
+
+実装状況（Phase 3で本格実装。lib/fraud/index.ts）：
+  種別1（concentrated_plays）・種別3（abnormal_completion）は再生ログ受信時
+    （app/api/tracks/[trackId]/play）に即時チェック（checkPlayEvent）。
+  種別2（same_ip）・種別4（mechanical_pattern）はバッチで検知：
+    play_events.ip_address カラムを追加し、再生ログ受信時にIPを記録
+      （x-forwarded-for / x-real-ip ヘッダーから取得）。
+    lib/fraud/index.ts の runFraudBatch(supabase) が直近24時間分の再生ログを
+      IP単位・ユーザー単位に集計し、同一IP大量再生と再生間隔の機械的パターン
+      （detectMechanicalPattern・純粋関数・テスト済み）を検知してフラグを立てる。
+    app/api/fraud/run/route.ts（CRON_SECRET認証・POST）で手動/Cron実行。
+  フラグの解除（resolved=true への更新）・level 2/3の実際の非公開化ロジックは
+    未実装（人力審査ダッシュボードでの運用を想定・Phase 4の課題として持ち越し）。
 ```
 
 ---
@@ -585,14 +705,16 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   - [x] ジャンル別コミュニティ・ライブ情報・音楽人格・ブロック/通報（v3.4第9章。詳細は下記「SNS拡張機能」節）
   - [x] アルバム概念・ベストトラックランキング（Topster風プロフィール。詳細は下記「アルバム・Topster」節）
   - [x] ブーストハート🚀（月3回無料+課金20回・重み2倍・直接70%送金。v3.4第8章。週間伸び率ランキングは未実装）
+  - [x] シングル/EP/アルバムの区別・曲順・アルバム単位の再生（詳細は上記節）
+  - [x] 支援者感謝ページ（詳細は上記節）
 
 - [ ] **Phase 3**（6〜8ヶ月）学生・決済拡張
   - [x] Studentプラン + .ed.jp認証（コード確認フローのみ実装。メール送信経路は未実装・要解決）
   - [ ] コンビニ払い（Stripe Konbini・30日前から審査申請）
-  - [ ] ペアレンタル決済フロー
+  - [x] ペアレンタル決済フロー（トークン方式・詳細は上記節。本番導入前にStripe利用規約上の懸念を確認）
   - [ ] ギフトコード
   - [x] 出金処理・artist_balances管理（申請承認/却下・残高通知・休眠判定。管理UIはなし・CRON_SECRET認証のAPIのみ）
-  - [ ] 不正検知バッチ
+  - [x] 不正検知バッチ（同一IP・機械的パターンの再走査。詳細は上記「不正検知」節）
 
 - [ ] **Phase 4**（8〜12ヶ月）エコノミー
   - [ ] キュレーターランク（先見性スコア）
@@ -726,7 +848,7 @@ ANTHROPIC_API_KEY=
 | 3 | 独自ウォレット方式の資金決済法適否 | 中 | Phase 4の投げ銭設計 |
 | 4 | サービス名の決定 | 高 | ドメイン・ブランディング |
 | 5 | JASRAC包括契約（弁護士） | 高 | Phase 3以降のカタログ |
-| 6 | 未成年アーティストの親権者同意フロー | 高 | Phase 0の登録設計 |
+| 6 | 未成年アーティストの親権者同意フロー（自己申告制の最小実装は完了。実在確認は未実装） | 中 | Phase 0の登録設計 |
 | 7 | AcoustIDの利用規約・商用利用条件 | 中 | Phase 1の審査フロー |
 | 8 | メール配信基盤の選定（.ed.jp確認コード送信用） | 高 | Studentプラン認証フローの本番稼働 |
 

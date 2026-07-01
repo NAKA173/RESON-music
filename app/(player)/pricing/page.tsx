@@ -226,13 +226,16 @@ function PricingContent() {
           </div>
         )}
 
-        <div className="text-center">
+        <div className="text-center space-x-4">
           <button
             onClick={openPortal}
             className="text-sm text-zinc-500 hover:text-zinc-300 underline transition"
           >
             プランの変更・解約はこちら
           </button>
+          <a href="/parental" className="text-sm text-zinc-500 hover:text-zinc-300 underline transition">
+            未成年の方はこちら（保護者の決済に紐付ける）
+          </a>
         </div>
 
         {/* 分配の透明性（仕様書: 計算式はパブリックに公開） */}

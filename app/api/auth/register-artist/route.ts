@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { name, bio, rights_confirmed, bank } = await req.json()
+  const { name, bio, rights_confirmed, bank, is_minor, parent_consent_name, parent_consent_contact } = await req.json()
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return NextResponse.json({ error: 'アーティスト名は必須です' }, { status: 400 })
@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
     typeof bank.account_holder_name !== 'string' || !bank.account_holder_name.trim()
   ) {
     return NextResponse.json({ error: '出金先の銀行口座情報は必須です' }, { status: 400 })
+  }
+  if (
+    is_minor === true &&
+    (typeof parent_consent_name !== 'string' || !parent_consent_name.trim() ||
+     typeof parent_consent_contact !== 'string' || !parent_consent_contact.trim())
+  ) {
+    return NextResponse.json({ error: '未成年の場合は保護者の氏名・連絡先が必須です' }, { status: 400 })
   }
 
   // 既に登録済みか確認
@@ -51,6 +58,9 @@ export async function POST(req: NextRequest) {
       review_status: 'pending',
       rights_confirmed: true,
       rights_confirmed_at: new Date().toISOString(),
+      is_minor: is_minor === true,
+      parent_consent_name: is_minor === true ? parent_consent_name.trim() : null,
+      parent_consent_contact: is_minor === true ? parent_consent_contact.trim() : null,
     })
     .select('id, name, review_status')
     .single()

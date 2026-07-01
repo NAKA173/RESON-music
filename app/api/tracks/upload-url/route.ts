@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { content_type, title, duration_sec, ai_generated, genre_ids, album_id } = await req.json()
+  const { content_type, title, duration_sec, ai_generated, genre_ids, album_id, track_number } = await req.json()
 
   const ext = getAudioExt(content_type)
   if (!ext) {
@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
     r2_key: r2Key,
     ai_generated: ai_generated ?? false,
     album_id: album_id ?? null,
+    track_number: album_id ? (track_number ?? null) : null,
   })
 
   if (insertError) {

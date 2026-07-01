@@ -16,6 +16,10 @@ export function buildR2Key(artistId: string, trackId: string, ext: string) {
   return `tracks/${artistId}/${trackId}.${ext}`
 }
 
+export function buildCoverR2Key(artistId: string, trackId: string, ext: string) {
+  return `covers/${artistId}/${trackId}.${ext}`
+}
+
 /** アップロード用署名付きURL（5分有効） */
 export async function getUploadUrl(key: string, contentType: string) {
   const cmd = new PutObjectCommand({
@@ -47,4 +51,14 @@ const ALLOWED_AUDIO_TYPES: Record<string, string> = {
 
 export function getAudioExt(contentType: string): string | null {
   return ALLOWED_AUDIO_TYPES[contentType] ?? null
+}
+
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+
+export function getImageExt(contentType: string): string | null {
+  return ALLOWED_IMAGE_TYPES[contentType] ?? null
 }

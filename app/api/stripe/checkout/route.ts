@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { PLAN_PRICE_IDS } from '@/lib/stripe'
 import { paymentProvider } from '@/lib/payment'
 import { NextRequest, NextResponse } from 'next/server'
@@ -34,25 +34,34 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Stripe CustomerID をメタデータに保存 or 既存を取得
   const { data: userData } = await supabase
     .from('users')
-    .select('stripe_customer_id')
+    .select('stripe_customer_id, parent_user_id')
     .eq('id', user.id)
     .single()
 
-  // stripe_customer_id カラムは migration で追加（後述）
-  let customerId = (userData as { stripe_customer_id?: string })?.stripe_customer_id
+  // ペアレンタル決済：保護者が紐付けられている場合は、決済（Stripe顧客・カード）は
+  // 保護者側に対して行い、プラン付与（metadata.supabase_user_id）は本人のまま行う
+  const parentUserId = (userData as { parent_user_id?: string })?.parent_user_id
+  const service = parentUserId ? await createServiceClient() : null
+  const payerClient = service ?? supabase
+  const payerId = parentUserId ?? user.id
+
+  const { data: payerData } = payerId === user.id
+    ? { data: userData }
+    : await payerClient.from('users').select('stripe_customer_id').eq('id', payerId).single()
+
+  let customerId = (payerData as { stripe_customer_id?: string } | null)?.stripe_customer_id
 
   if (!customerId) {
     const { customerId: newCustomerId } = await paymentProvider.createCustomer({
-      metadata: { supabase_user_id: user.id },
+      metadata: { supabase_user_id: payerId },
     })
     customerId = newCustomerId
-    await supabase
+    await payerClient
       .from('users')
       .update({ stripe_customer_id: customerId } as never)
-      .eq('id', user.id)
+      .eq('id', payerId)
   }
 
   const origin = req.headers.get('origin') ?? 'http://localhost:3000'

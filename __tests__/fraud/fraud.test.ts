@@ -1,4 +1,4 @@
-import { checkPlayEvent, checkSameIpVolume, FRAUD_THRESHOLDS } from '@/lib/fraud'
+import { checkPlayEvent, checkSameIpVolume, detectMechanicalPattern, FRAUD_THRESHOLDS } from '@/lib/fraud'
 
 function makeSupabaseMock({
   sameTrackCount = 0,
@@ -90,5 +90,28 @@ describe('checkSameIpVolume', () => {
     const { supabase, inserted } = makeSupabaseMock({})
     await checkSameIpVolume(supabase as never, 't1', 'u1', FRAUD_THRESHOLDS.SAME_IP_MAX_PLAYS - 1)
     expect(inserted).toHaveLength(0)
+  })
+})
+
+describe('detectMechanicalPattern', () => {
+  test('ほぼ一定間隔（±1秒以内）が閾値回数以上続くと機械的パターンと判定する', () => {
+    const start = Date.now()
+    const timestamps = Array.from({ length: FRAUD_THRESHOLDS.MECHANICAL_STREAK + 1 }, (_, i) => start + i * 30_000)
+    expect(detectMechanicalPattern(timestamps)).toBe(true)
+  })
+
+  test('間隔が大きく揺れる場合は機械的パターンと判定しない', () => {
+    const start = Date.now()
+    const timestamps = Array.from(
+      { length: FRAUD_THRESHOLDS.MECHANICAL_STREAK + 1 },
+      (_, i) => start + i * (30_000 + (i % 2 === 0 ? 15_000 : -15_000))
+    )
+    expect(detectMechanicalPattern(timestamps)).toBe(false)
+  })
+
+  test('イベント数が閾値未満なら判定しない', () => {
+    const start = Date.now()
+    const timestamps = Array.from({ length: FRAUD_THRESHOLDS.MECHANICAL_STREAK - 1 }, (_, i) => start + i * 30_000)
+    expect(detectMechanicalPattern(timestamps)).toBe(false)
   })
 })

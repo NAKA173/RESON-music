@@ -18,6 +18,9 @@ export default function RegisterPage() {
   const [accountNumber, setAccountNumber] = useState('')
   const [accountHolderName, setAccountHolderName] = useState('')
   const [rightsConfirmed, setRightsConfirmed] = useState(false)
+  const [isMinor, setIsMinor] = useState(false)
+  const [parentConsentName, setParentConsentName] = useState('')
+  const [parentConsentContact, setParentConsentContact] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -76,6 +79,10 @@ export default function RegisterPage() {
       setError('権利確認への同意が必要です')
       return
     }
+    if (isMinor && (!parentConsentName.trim() || !parentConsentContact.trim())) {
+      setError('未成年の場合は保護者の氏名・連絡先が必要です')
+      return
+    }
     setError('')
     setLoading(true)
     const res = await fetch('/api/auth/register-artist', {
@@ -92,6 +99,9 @@ export default function RegisterPage() {
           account_number: accountNumber,
           account_holder_name: accountHolderName,
         },
+        is_minor: isMinor,
+        parent_consent_name: isMinor ? parentConsentName : undefined,
+        parent_consent_contact: isMinor ? parentConsentContact : undefined,
       }),
     })
     const data = await res.json()
@@ -301,6 +311,37 @@ export default function RegisterPage() {
               />
               <span className="text-sm">上記の内容に同意します</span>
             </label>
+
+            <label className="flex items-start gap-3 cursor-pointer border-t border-zinc-800 pt-4">
+              <input
+                type="checkbox"
+                checked={isMinor}
+                onChange={(e) => setIsMinor(e.target.checked)}
+                className="w-5 h-5 mt-0.5 rounded accent-white"
+              />
+              <span className="text-sm">未成年です（保護者の同意が必要です）</span>
+            </label>
+            {isMinor && (
+              <div className="space-y-2 pl-8">
+                <input
+                  type="text"
+                  placeholder="保護者の氏名"
+                  value={parentConsentName}
+                  onChange={(e) => setParentConsentName(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                />
+                <input
+                  type="text"
+                  placeholder="保護者の連絡先（電話番号 or メールアドレス）"
+                  value={parentConsentContact}
+                  onChange={(e) => setParentConsentContact(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                />
+                <p className="text-xs text-zinc-600">
+                  保護者本人が本登録内容（著作権確認・銀行口座情報を含む）に同意していることを確認してください。
+                </p>
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading || !rightsConfirmed}

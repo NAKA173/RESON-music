@@ -19,6 +19,7 @@ export async function POST(
 
   const { trackId } = await params
   const { played_sec, completed } = await req.json()
+  const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip')
 
   if (typeof played_sec !== 'number' || !Number.isFinite(played_sec) || played_sec < 0) {
     return NextResponse.json({ error: 'played_sec が不正です' }, { status: 400 })
@@ -77,6 +78,7 @@ export async function POST(
     completed: isCompleted,
     weight,
     sec_factor,
+    ip_address: ipAddress,
   })
 
   // 不正検知の簡易チェック（フラグが立った再生は分配計算から除外される）

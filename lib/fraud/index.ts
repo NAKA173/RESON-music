@@ -9,6 +9,10 @@ const SAME_IP_MAX_PLAYS = 100
 const HIGH_COMPLETION_THRESHOLD = 0.99
 const HIGH_COMPLETION_STREAK = 30
 
+const MECHANICAL_INTERVAL_TOLERANCE_SEC = 1
+const MECHANICAL_STREAK = 10
+const SAME_IP_WINDOW_HOURS = 24
+
 export type FlagType =
   | 'concentrated_plays'
   | 'same_ip'
@@ -104,10 +108,88 @@ export async function checkSameIpVolume(
   }
 }
 
+/**
+ * 再生間隔が±1秒以内で連続するパターン（機械的な自動再生を疑う）を純粋関数として判定する。
+ * timestampsMs は同一ユーザーの再生イベントの created_at（昇順）。
+ */
+export function detectMechanicalPattern(timestampsMs: number[]): boolean {
+  if (timestampsMs.length < MECHANICAL_STREAK + 1) return false
+
+  let streak = 1
+  for (let i = 1; i < timestampsMs.length; i++) {
+    const intervalSec = Math.abs(timestampsMs[i] - timestampsMs[i - 1]) / 1000
+    const prevIntervalSec = i >= 2 ? Math.abs(timestampsMs[i - 1] - timestampsMs[i - 2]) / 1000 : intervalSec
+
+    if (Math.abs(intervalSec - prevIntervalSec) <= MECHANICAL_INTERVAL_TOLERANCE_SEC) {
+      streak++
+      if (streak >= MECHANICAL_STREAK) return true
+    } else {
+      streak = 1
+    }
+  }
+  return false
+}
+
+/**
+ * 不正検知バッチ（種別2: 同一IP大量再生、種別4: 機械的パターン）。
+ * 種別1・3は再生ログ受信時に即時チェック済み（checkPlayEvent）。このバッチは
+ * IPベース・複数イベントに跨る集計が必要な種別を定期的に再走査する。
+ */
+export async function runFraudBatch(supabase: SupabaseClient): Promise<{ flagged: number }> {
+  const since = new Date(Date.now() - SAME_IP_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+
+  const { data: events } = await supabase
+    .from('play_events')
+    .select('track_id, user_id, ip_address, created_at')
+    .gte('created_at', since)
+    .order('created_at', { ascending: true })
+
+  let flagged = 0
+
+  // 種別2: 同一IPから24時間以内に一定回数以上の再生（IP単位で集計し、関与した各 user×track に対してフラグ）
+  const byIp = new Map<string, { track_id: string; user_id: string }[]>()
+  for (const e of events ?? []) {
+    if (!e.ip_address) continue
+    const list = byIp.get(e.ip_address) ?? []
+    list.push({ track_id: e.track_id, user_id: e.user_id })
+    byIp.set(e.ip_address, list)
+  }
+  for (const [, plays] of byIp) {
+    if (plays.length < SAME_IP_MAX_PLAYS) continue
+    const uniquePairs = new Set(plays.map((p) => `${p.track_id}:${p.user_id}`))
+    for (const pair of uniquePairs) {
+      const [track_id, user_id] = pair.split(':')
+      await raiseFlag(supabase, track_id, user_id, 'same_ip', 2)
+      flagged++
+    }
+  }
+
+  // 種別4: ユーザーごとに再生間隔の機械的パターンを検出
+  const byUser = new Map<string, { track_id: string; ts: number }[]>()
+  for (const e of events ?? []) {
+    const list = byUser.get(e.user_id) ?? []
+    list.push({ track_id: e.track_id, ts: new Date(e.created_at).getTime() })
+    byUser.set(e.user_id, list)
+  }
+  for (const [user_id, plays] of byUser) {
+    const timestamps = plays.map((p) => p.ts)
+    if (detectMechanicalPattern(timestamps)) {
+      const lastTrackId = plays[plays.length - 1].track_id
+      await raiseFlag(supabase, lastTrackId, user_id, 'mechanical_pattern', 2)
+      flagged++
+    }
+  }
+
+  return { flagged }
+}
+
 export const FRAUD_THRESHOLDS = {
   SAME_TRACK_WINDOW_MIN,
   SAME_TRACK_MAX_PLAYS,
   SAME_IP_MAX_PLAYS,
   HIGH_COMPLETION_THRESHOLD,
   HIGH_COMPLETION_STREAK,
+  MECHANICAL_INTERVAL_TOLERANCE_SEC,
+  MECHANICAL_STREAK,
+  SAME_IP_WINDOW_HOURS,
 }

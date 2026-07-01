@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ tr
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { album_id } = await req.json()
+  const { album_id, track_number } = await req.json()
 
   const { data: track } = await supabase
     .from('tracks')
@@ -31,9 +31,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ tr
 
   const { data: updated, error } = await supabase
     .from('tracks')
-    .update({ album_id: album_id ?? null })
+    .update({
+      album_id: album_id ?? null,
+      track_number: album_id ? (track_number ?? null) : null,
+    })
     .eq('id', trackId)
-    .select('id, title, album_id')
+    .select('id, title, album_id, track_number')
     .single()
 
   if (error) {

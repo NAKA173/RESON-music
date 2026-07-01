@@ -41,7 +41,10 @@ interface AlbumSummary {
   id: string
   title: string
   released_at: string | null
+  release_type: 'single' | 'ep' | 'album'
 }
+
+const RELEASE_TYPE_LABEL: Record<string, string> = { single: 'シングル', ep: 'EP', album: 'アルバム' }
 
 interface BankAccount {
   bank_name: string
@@ -144,6 +147,12 @@ export default function DashboardPage() {
             <p className="text-sm text-zinc-400">アーティストダッシュボード</p>
           </div>
           <div className="flex gap-2">
+            <Link
+              href="/supporters"
+              className="text-sm border border-zinc-700 px-4 py-2 rounded-lg font-semibold hover:border-zinc-400 transition"
+            >
+              支援者
+            </Link>
             <Link
               href="/report"
               className="text-sm border border-zinc-700 px-4 py-2 rounded-lg font-semibold hover:border-zinc-400 transition"
@@ -393,12 +402,19 @@ export default function DashboardPage() {
             <p className="text-sm text-zinc-500">まだアルバムがありません</p>
           ) : (
             albums.map((a) => (
-              <div key={a.id} className="flex justify-between text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
-                <span className="truncate">{a.title}</span>
+              <Link
+                key={a.id}
+                href={`/albums?id=${a.id}`}
+                className="flex justify-between items-center text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0 hover:text-white"
+              >
+                <span className="truncate">
+                  {a.title}
+                  <span className="ml-2 text-xs text-zinc-500">{RELEASE_TYPE_LABEL[a.release_type] ?? 'アルバム'}</span>
+                </span>
                 <span className="text-zinc-500 text-xs">
                   {a.released_at ? new Date(a.released_at).toLocaleDateString('ja-JP') : '未発表日'}
                 </span>
-              </div>
+              </Link>
             ))
           )}
         </div>
