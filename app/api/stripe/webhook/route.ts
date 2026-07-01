@@ -141,6 +141,7 @@ async function handleBoostSucceeded(
     year_month,
     amount_yen: 30,
     payment_id: providerChargeId,
+    billed: true,
   })
 
   const { data: track } = await supabase.from('tracks').select('artist_id').eq('id', track_id).single()

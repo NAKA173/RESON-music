@@ -7,6 +7,7 @@ import type {
   OneTimeChargeResult,
   SubscriptionCheckoutParams,
   BillingPortalParams,
+  PendingInvoiceItemParams,
   NormalizedWebhookEvent,
 } from '../types'
 import { WebhookVerificationError } from '../types'
@@ -51,6 +52,17 @@ export class StripeAdapter implements PaymentProvider {
       return_url: params.returnUrl,
     })
     return { url: session.url }
+  }
+
+  async createPendingInvoiceItem(params: PendingInvoiceItemParams): Promise<{ invoiceItemId: string }> {
+    const item = await stripe.invoiceItems.create({
+      customer: params.customerId,
+      amount: params.amountYen,
+      currency: 'jpy',
+      description: params.description,
+      metadata: params.metadata,
+    })
+    return { invoiceItemId: item.id }
   }
 
   verifyAndNormalizeWebhook(rawBody: string, signature: string | null): NormalizedWebhookEvent {

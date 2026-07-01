@@ -77,16 +77,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, type: 'free', remaining: MAX_BOOSTS_PER_MONTH - used - 1 })
   }
 
-  // 追加分は30円の決済を発生させる（Webhook成功時にboost_heartsへ記録・残高加算）
   const { data: userData } = await supabase
     .from('users')
-    .select('stripe_customer_id')
+    .select('plan, stripe_customer_id')
     .eq('id', user.id)
     .single()
 
+  const plan = (userData as { plan?: string })?.plan ?? 'free'
+  const customerId = (userData as { stripe_customer_id?: string })?.stripe_customer_id
+
+  // サブスク契約がある場合：都度課金せず、次回のサブスク請求に合算する（30円がStripeの
+  // 実用上の最低決済額50円を下回るため。月末に settle_monthly_boosts で残高へ反映）
+  if (plan !== 'free' && customerId) {
+    await paymentProvider.createPendingInvoiceItem({
+      customerId,
+      amountYen: BOOST_PRICE_YEN,
+      description: `追加ブーストハート🚀（${yearMonth}）`,
+      metadata: { type: 'boost', track_id, user_id: user.id, year_month: yearMonth },
+    })
+
+    const { error } = await supabase.from('boost_hearts').insert({
+      track_id,
+      user_id: user.id,
+      year_month: yearMonth,
+      amount_yen: BOOST_PRICE_YEN,
+      billed: false,
+    })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      ok: true,
+      type: 'deferred_to_invoice',
+      remaining: MAX_BOOSTS_PER_MONTH - used - 1,
+      price_yen: BOOST_PRICE_YEN,
+    })
+  }
+
+  // Free プラン（サブスクなし）は都度課金するしかない
   const { clientSecret } = await paymentProvider.createOneTimeCharge({
     amountYen: BOOST_PRICE_YEN,
-    customerId: (userData as { stripe_customer_id?: string })?.stripe_customer_id ?? undefined,
+    customerId: customerId ?? undefined,
     metadata: { type: 'boost', track_id, user_id: user.id, year_month: yearMonth },
   })
 

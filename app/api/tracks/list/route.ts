@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
       album_id,
       artists ( id, name )
     `)
+    .eq('review_status', 'approved')
     .order('created_at', { ascending: false })
     .limit(50)
 

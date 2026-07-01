@@ -20,6 +20,7 @@ interface Track {
   cumulative_plays: number
   in_distribution: boolean
   ai_generated: boolean
+  review_status: 'pending' | 'approved' | 'rejected'
 }
 
 interface ReportData {
@@ -164,8 +165,12 @@ export default function ArtistReportPage() {
             data.tracks.map((t) => (
               <div key={t.id} className="flex items-center justify-between text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
                 <span className="truncate">{t.title}</span>
-                <span className={t.in_distribution ? 'text-zinc-300' : 'text-zinc-600'}>
-                  {t.in_distribution ? `分配対象（${t.cumulative_plays.toLocaleString()}再生）` : `${t.cumulative_plays}/100再生`}
+                <span className="flex items-center gap-2 shrink-0">
+                  {t.review_status === 'pending' && <span className="text-xs text-yellow-500">審査中</span>}
+                  {t.review_status === 'rejected' && <span className="text-xs text-red-400">却下</span>}
+                  <span className={t.in_distribution ? 'text-zinc-300' : 'text-zinc-600'}>
+                    {t.in_distribution ? `分配対象（${t.cumulative_plays.toLocaleString()}再生）` : `${t.cumulative_plays}/100再生`}
+                  </span>
                 </span>
               </div>
             ))

@@ -39,6 +39,11 @@ export function BoostButton({ trackId }: { trackId: string }) {
       setJustBoosted(true)
       setStatus((s) => s ? { ...s, used: s.used + 1, remaining: data.remaining, free_remaining: Math.max(s.free_remaining - 1, 0) } : s)
       setTimeout(() => setJustBoosted(false), 1500)
+    } else if (data.type === 'deferred_to_invoice') {
+      // サブスク契約者は都度課金せず、次回請求に合算（決済確認モーダルは不要）
+      setJustBoosted(true)
+      setStatus((s) => s ? { ...s, used: s.used + 1, remaining: data.remaining } : s)
+      setTimeout(() => setJustBoosted(false), 1500)
     } else {
       setClientSecret(data.client_secret)
     }
@@ -63,7 +68,7 @@ export function BoostButton({ trackId }: { trackId: string }) {
         🚀 {justBoosted ? 'ブースト済み' : 'ブースト'}
       </button>
       <span className="text-xs text-zinc-500">
-        今月残り{status.remaining}回（無料{status.free_remaining}回）
+        今月残り{status.remaining}回（無料{status.free_remaining}回・追加分は次回請求と合算）
       </span>
       {error && <span className="text-xs text-red-400">{error}</span>}
 

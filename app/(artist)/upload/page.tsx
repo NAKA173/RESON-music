@@ -193,6 +193,9 @@ export default function UploadPage() {
         <div>
           <h1 className="text-2xl font-bold">楽曲をアップロード</h1>
           <p className="text-sm text-zinc-400 mt-1">MP3 / M4A / FLAC / WAV / OGG（最大{MAX_SIZE_MB}MB）</p>
+          <p className="text-xs text-zinc-600 mt-1">
+            アップロード後、審査（著作権侵害・不正コンテンツの確認）を経て配信開始となります。審査中もダッシュボードから確認できます。
+          </p>
         </div>
 
         {error && (

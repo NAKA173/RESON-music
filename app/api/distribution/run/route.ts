@@ -21,5 +21,8 @@ export async function POST(req: NextRequest) {
   // Support+ 投げ銭も同時精算
   await supabase.rpc('settle_support_plus_tips', { p_year_month: year_month })
 
+  // 追加ブースト（サブスク請求合算分）も同時精算
+  await supabase.rpc('settle_monthly_boosts', { p_year_month: year_month })
+
   return NextResponse.json({ ok: true, ...result })
 }

@@ -312,9 +312,23 @@ Support Graph（応援の連鎖表示）：
     フォロー中の応援者がいない場合は総応援数のみ返す（プライバシー上、個人の特定はフォロー関係がある場合のみ）。
   UI: components/SupportGraph.tsx（Player内に表示）
 
-未解決（既存の課題のまま）：
-  追加ブースト（30円）はStripeの実用上の最低決済額（50円）を下回るため、本番導入前に
-  決済方式の見直しが必要（v3.4第8章に既存記載のまま）。
+追加ブースト（30円）の課金方式変更（Stripe最低決済額50円問題の解決）：
+  従来は追加ブーストごとに都度PaymentIntentで課金していたが、30円は
+  Stripeの実用上の最低決済額（50円）を下回るため、サブスク契約者（Standard/
+  Student/Support+）は都度課金せず、月次カウントを Stripe の pending invoice item
+  として積み上げ、次回のサブスク請求（月額利用料）と合算して決済する方式に変更。
+  Freeプラン（サブスクなし・合算先の請求サイクルがない）のみ従来の都度課金を維持。
+
+  lib/payment/types.ts, providers/stripe.ts  createPendingInvoiceItem を追加
+    （PaymentProviderインターフェースに新規メソッド。Stripeの invoiceItems.create() ラッパー）
+  app/api/boost/route.ts   plan!=='free' かつ stripe_customer_id ありの場合は
+    createPendingInvoiceItem を呼び、boost_hearts に billed=false で即時記録
+  supabase/migrations/20260019_boost_monthly_billing.sql
+    boost_hearts.billed カラム追加。settle_monthly_boosts(year_month) 関数で
+    月次バッチ実行時に未請求分をアーティスト残高へ70%加算し billed=true に更新
+    （app/api/distribution/run で settle_support_plus_tips と同時実行）。
+  components/BoostButton.tsx  'deferred_to_invoice' レスポンス時は決済確認モーダルを
+    出さず即時成功表示（実際の決済は次回請求時にStripeが自動処理）
 ```
 
 ---
@@ -379,23 +393,32 @@ Support+: 1,000円  高音質・応援ボーナス
 
 ---
 
-## アーティスト登録審査・出金先銀行口座（Phase 0拡張・配信代行サービスのフローを参考に追加）
+## アーティスト登録・出金先銀行口座（Phase 0拡張）
 
 ```
-参考にした実サービスのフロー（WebSearchで調査）：
-  - TuneCore Japan：配信審査に通過するまで利用料は課金されない。銀行口座の名義は
-    登録者本人の氏名と一致が必須。著作権者の同意は省略不可（権利確認フロー必須）。
-  - BIG UP!：アーティスト登録後、楽曲・ジャケット登録を経て審査（人力・実例で数日）
-    を通過してから配信開始。ジャケット画像の権利侵害が主な却下理由。
-
 RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作らずCRON_SECRET運用で統一）：
   artists.review_status text ('pending' | 'approved' | 'rejected') DEFAULT 'pending'
+    アーティストアカウント自体の審査（本人確認相当。楽曲ごとの配信審査とは別物。
+    楽曲単位の審査は下記「楽曲登録審査」節を参照）。
     既存アーティストはマイグレーション時点で 'approved' に移行済み（無審査運用してきたため）。
   artists.rights_confirmed bool / rights_confirmed_at timestamptz
     登録時に著作権・第三者権利侵害なし・銀行情報正確性のチェックボックス同意が必須（スキップ不可）。
   artist_bank_accounts（出金先銀行口座。本人名義一致の検証はUI上の注記のみ・自動検証は未実装）
     bank_name / branch_name / account_type('ordinary'|'checking') / account_number /
     account_holder_name。RLSは本人（artists.user_id）のみ読み書き可。
+
+銀行口座情報の使われ方（明確化）：
+  銀行APIとの自動連携は一切ない（実装されているのはDBへの保存のみ）。
+  実際の資金移動は次の通り、すべて人力オペレーションで行われる：
+    1. アーティストが出金申請（app/api/payout/request）→ payout_requests に pending で記録
+    2. 運営担当者が CRON_SECRET 経由で app/api/payout/process を action='paid' で叩く
+       → lib/payout/process.ts の processPayoutRequest が artist_bank_accounts を取得し、
+         レスポンスに bank_account を含めて返す（担当者はこれを見て実際の銀行振込を手動で行う）
+    3. artist_balances から出金額を減算（振込実行のトリガーではなく、システム側の記録更新のみ）
+  アーティスト本人は app/api/artist/bank-account（GET/PATCH）でいつでも口座情報を確認・更新可能
+  （GETは口座番号を末尾4桁以外マスクして返す）。ダッシュボードから編集フォームにアクセスできる。
+  将来的に銀行振込APIとの連携（GMOあおぞらネット銀行API等）を行う場合はこの層を差し替える想定
+  だが、現時点では未実装・調査もしていない。
 
 登録フロー（app/(auth)/register/page.tsx）：
   phone → otp → artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認・同意必須）→ done
@@ -407,6 +430,41 @@ RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作
 
 ダッシュボード（app/(artist)/dashboard/page.tsx）：review_status が pending/rejected の場合に
   バナー表示。アルバム一覧も追加表示（/api/albums?mine=true）。
+```
+
+---
+
+## 楽曲登録審査（配信代行サービスのフローを参考に追加。訂正: 「登録のプロセスを
+配信代行サービスに近づける」という指示は、アーティスト登録ではなくこの楽曲登録の
+フローを指していた）
+
+```
+参考にした実サービスのフロー（WebSearchで調査）：
+  - TuneCore Japan：配信審査に通過するまで利用料は課金されない。
+  - BIG UP!：楽曲・ジャケット登録を経て審査（人力・実例で数日）を通過してから配信開始。
+    ジャケット画像の権利侵害が主な却下理由。
+
+RESON実装（楽曲単位の審査。アーティスト登録自体の審査＝artists.review_status とは別軸）：
+  tracks.review_status text ('pending' | 'approved' | 'rejected') DEFAULT 'pending'
+    既存楽曲はマイグレーション時点で 'approved' に移行済み（無審査で配信してきたため）。
+  tracks.reviewed_at timestamptz
+
+アップロードは審査を待たずに可能（app/(artist)/upload）。ただし review_status = 'approved'
+の楽曲のみが公開のリスナー向け一覧に現れる（審査中は実質「非公開アップロード」状態）：
+  app/api/tracks/list/route.ts             .eq('review_status', 'approved')
+  app/api/explore/route.ts                 同上
+  lib/distribution/heat-candidates.ts      同上（熱量ランキング・おすすめの元データ）
+  アーティスト自身のダッシュボード・レポート（app/api/artist/report）は review_status を
+  問わず全楽曲を表示し、審査中/却下のバッジを出す（本人には常に見える）。
+
+審査API：app/api/tracks/review/route.ts（CRON_SECRET認証・POST { track_id, action }）
+  app/api/artist/review・app/api/payout/process と同じ「管理UIなし・bearer tokenで
+  手動運用」パターンを採用。
+
+未実装：ジャケット写真のアップロード（BIG UP!等は必須項目だが、RESONでは
+  albums.cover_url のみ存在し、シングル曲用の画像アップロードUIはまだない）。
+  不正コンテンツの判定基準（何を審査するか）は運営の目視確認を前提とし、システム上の
+  自動判定ロジックは持たない。
 ```
 
 ---

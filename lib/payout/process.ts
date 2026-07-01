@@ -28,7 +28,8 @@ export async function processPayoutRequest(
     .eq('id', requestId)
 
   if (action === 'paid') {
-    // 出金額分を残高から減算（実際の銀行振込は別オペレーションで実施する前提・最小実装）
+    // 出金額分を残高から減算（実際の銀行振込はこの後、運営担当者が bank_account の
+    // 情報を参照して手動で行う。銀行API連携は未実装・最小実装）
     const { data: balance } = await supabase
       .from('artist_balances')
       .select('balance_yen')
@@ -42,7 +43,19 @@ export async function processPayoutRequest(
       .eq('artist_id', request.artist_id)
   }
 
-  return { ok: true, request_id: requestId, action }
+  const { data: bankAccount } = await supabase
+    .from('artist_bank_accounts')
+    .select('bank_name, branch_name, account_type, account_number, account_holder_name')
+    .eq('artist_id', request.artist_id)
+    .single()
+
+  return {
+    ok: true,
+    request_id: requestId,
+    action,
+    amount_yen: request.amount_yen,
+    bank_account: bankAccount ?? null,
+  }
 }
 
 // 累積50,000円超え通知バッチ（毎月のCronから実行する前提）

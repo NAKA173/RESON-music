@@ -20,6 +20,7 @@ interface Track {
   cumulative_plays: number
   in_distribution: boolean
   ai_generated: boolean
+  review_status: 'pending' | 'approved' | 'rejected'
 }
 
 interface ReportData {
@@ -42,6 +43,14 @@ interface AlbumSummary {
   released_at: string | null
 }
 
+interface BankAccount {
+  bank_name: string
+  branch_name: string
+  account_type: 'ordinary' | 'checking'
+  account_number: string
+  account_holder_name: string
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,6 +58,13 @@ export default function DashboardPage() {
   const [payoutError, setPayoutError] = useState('')
   const [payoutLoading, setPayoutLoading] = useState(false)
   const [albums, setAlbums] = useState<AlbumSummary[]>([])
+  const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
+  const [editingBank, setEditingBank] = useState(false)
+  const [bankForm, setBankForm] = useState<BankAccount>({
+    bank_name: '', branch_name: '', account_type: 'ordinary', account_number: '', account_holder_name: '',
+  })
+  const [bankError, setBankError] = useState('')
+  const [bankSaved, setBankSaved] = useState(false)
 
   useEffect(() => {
     fetch('/api/artist/report')
@@ -60,7 +76,28 @@ export default function DashboardPage() {
     fetch('/api/albums?mine=true')
       .then((r) => (r.ok ? r.json() : { albums: [] }))
       .then((d) => setAlbums(d.albums ?? []))
+    fetch('/api/artist/bank-account')
+      .then((r) => (r.ok ? r.json() : { bank_account: null }))
+      .then((d) => setBankAccount(d.bank_account))
   }, [])
+
+  async function saveBankAccount(e: React.FormEvent) {
+    e.preventDefault()
+    setBankError('')
+    const res = await fetch('/api/artist/bank-account', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bankForm),
+    })
+    const body = await res.json()
+    if (!res.ok) { setBankError(body.error); return }
+    setEditingBank(false)
+    setBankSaved(true)
+    setTimeout(() => setBankSaved(false), 2000)
+    fetch('/api/artist/bank-account')
+      .then((r) => r.json())
+      .then((d) => setBankAccount(d.bank_account))
+  }
 
   async function requestPayout() {
     setPayoutError('')
@@ -241,6 +278,12 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <p className="truncate">{t.title}</p>
                   <div className="flex gap-2 mt-0.5">
+                    {t.review_status === 'pending' && (
+                      <span className="text-xs text-yellow-500">審査中</span>
+                    )}
+                    {t.review_status === 'rejected' && (
+                      <span className="text-xs text-red-400">却下</span>
+                    )}
                     {t.ai_generated && (
                       <span className="text-xs text-yellow-600">AI生成</span>
                     )}
@@ -257,6 +300,85 @@ export default function DashboardPage() {
               </div>
             ))
           )}
+        </div>
+
+        {/* 出金先銀行口座 */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">出金先銀行口座</h2>
+            <button
+              onClick={() => {
+                if (bankAccount) setBankForm(bankAccount)
+                setEditingBank((v) => !v)
+              }}
+              className="text-xs text-zinc-400 hover:text-white underline"
+            >
+              {editingBank ? 'キャンセル' : '編集する'}
+            </button>
+          </div>
+          <p className="text-xs text-zinc-600">
+            出金申請が承認されると、運営がこの口座情報を参照して毎月15日payoutで手動振込を行います
+            （銀行APIとの自動連携は未実装のため、振込自体は人力オペレーションです）。
+          </p>
+
+          {!editingBank ? (
+            bankAccount ? (
+              <div className="text-sm text-zinc-300 space-y-1">
+                <p>{bankAccount.bank_name} {bankAccount.branch_name}</p>
+                <p>{bankAccount.account_type === 'ordinary' ? '普通' : '当座'} {bankAccount.account_number}</p>
+                <p className="text-zinc-500">{bankAccount.account_holder_name}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">口座情報が登録されていません</p>
+            )
+          ) : (
+            <form onSubmit={saveBankAccount} className="space-y-2">
+              <input
+                value={bankForm.bank_name}
+                onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })}
+                placeholder="銀行名"
+                required
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+              />
+              <input
+                value={bankForm.branch_name}
+                onChange={(e) => setBankForm({ ...bankForm, branch_name: e.target.value })}
+                placeholder="支店名"
+                required
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+              />
+              <select
+                value={bankForm.account_type}
+                onChange={(e) => setBankForm({ ...bankForm, account_type: e.target.value as 'ordinary' | 'checking' })}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-400"
+              >
+                <option value="ordinary">普通</option>
+                <option value="checking">当座</option>
+              </select>
+              <input
+                value={bankForm.account_number}
+                onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })}
+                placeholder="口座番号"
+                required
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+              />
+              <input
+                value={bankForm.account_holder_name}
+                onChange={(e) => setBankForm({ ...bankForm, account_holder_name: e.target.value })}
+                placeholder="口座名義（カナ）"
+                required
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+              />
+              {bankError && <p className="text-xs text-red-400">{bankError}</p>}
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-white py-2 text-sm font-semibold text-black hover:bg-zinc-200"
+              >
+                保存する
+              </button>
+            </form>
+          )}
+          {bankSaved && <p className="text-xs text-emerald-400">保存しました</p>}
         </div>
 
         {/* アルバム */}

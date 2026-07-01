@@ -45,6 +45,7 @@ export async function fetchHeatScoredCandidates(
     .from('tracks')
     .select('id, title, duration_sec, ai_generated, cumulative_plays, artist_id, artists ( id, name )')
     .in('id', candidateTrackIds)
+    .eq('review_status', 'approved')
 
   const trackMeta = (tracksData ?? []).map((t: TrackMetaRow) => ({
     track_id: t.id,
