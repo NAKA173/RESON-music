@@ -6,9 +6,10 @@ function makeSupabaseMock({
   existingFlag = null as { id: string } | null,
 }) {
   const inserted: unknown[] = []
+  const updated: { table: string; values: unknown }[] = []
 
   const supabase = {
-    from: jest.fn(() => {
+    from: jest.fn((table: string) => {
       const builder: Record<string, unknown> = {}
       builder.select = jest.fn(() => builder)
       builder.eq = jest.fn(() => builder)
@@ -20,6 +21,10 @@ function makeSupabaseMock({
         inserted.push(row)
         return Promise.resolve({ data: null, error: null })
       })
+      builder.update = jest.fn((values: unknown) => {
+        updated.push({ table, values })
+        return builder
+      })
       // count クエリは select().eq()... の最後に await されるので thenable にする
       builder.then = (resolve: (v: { count: number }) => void) => {
         resolve({ count: sameTrackCount })
@@ -29,7 +34,7 @@ function makeSupabaseMock({
     }),
   }
 
-  return { supabase, inserted }
+  return { supabase, inserted, updated }
 }
 
 describe('checkPlayEvent', () => {
@@ -90,6 +95,14 @@ describe('checkSameIpVolume', () => {
     const { supabase, inserted } = makeSupabaseMock({})
     await checkSameIpVolume(supabase as never, 't1', 'u1', FRAUD_THRESHOLDS.SAME_IP_MAX_PLAYS - 1)
     expect(inserted).toHaveLength(0)
+  })
+
+  test('level 2フラグが立つと対象楽曲を配信停止にする', async () => {
+    const { supabase, updated } = makeSupabaseMock({})
+    await checkSameIpVolume(supabase as never, 't1', 'u1', FRAUD_THRESHOLDS.SAME_IP_MAX_PLAYS)
+    expect(updated).toContainEqual(
+      expect.objectContaining({ table: 'tracks', values: { fraud_suspended: true } })
+    )
   })
 })
 

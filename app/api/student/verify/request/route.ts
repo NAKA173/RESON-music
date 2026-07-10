@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { isEdJpEmail, generateVerificationCode, codeExpiresAt } from '@/lib/student/verify'
+import { sendEmail } from '@/lib/email'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -28,7 +29,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // TODO: 実際のメール送信は未実装（メール配信基盤が未構築・本番導入前に解決必須）。
-  // 現状は確認コードをDBに保存するのみで、送信経路は別途決定する必要がある。
-  return NextResponse.json({ ok: true })
+  const { sent } = await sendEmail({
+    to: school_email,
+    subject: 'RESON Studentプラン認証コード',
+    text: `以下の6桁の確認コードをRESONの認証画面に入力してください（有効期限10分）。\n\n${code}\n\nこのメールに心当たりがない場合は破棄してください。`,
+  })
+
+  return NextResponse.json({ ok: true, email_sent: sent })
 }

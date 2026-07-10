@@ -21,6 +21,8 @@ const TYPE_LABEL: Record<string, string> = {
   support: '応援されました',
   new_track: 'フォロー中のアーティストが新曲を配信開始しました',
   balance_threshold: '残高が一定額を超えました',
+  message: 'メッセージが届きました',
+  monthly_report: '今月の分配レポートが確定しました',
 }
 
 export default function NotificationsPage() {

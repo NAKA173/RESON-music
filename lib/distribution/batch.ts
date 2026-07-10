@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { calcTrackScores, calcDistribution } from './score'
+import { createNotification } from '@/lib/sns/notify'
 import type { PlayEventRow } from './types'
 
 export async function runMonthlyDistribution(
@@ -119,6 +120,20 @@ export async function runMonthlyDistribution(
       p_artist_id: artist_id,
       p_amount: distribution_yen,
     })
+
+    // 月次レポート確定通知
+    if (distribution_yen > 0) {
+      const { data: artist } = await supabase.from('artists').select('user_id').eq('id', artist_id).single()
+      if (artist?.user_id) {
+        await createNotification({
+          userId: artist.user_id,
+          type: 'monthly_report',
+          actorUserId: null,
+          targetType: 'monthly_distribution',
+          targetId: artist_id,
+        })
+      }
+    }
   }
 
   return { distributed: distributions.size, pool }

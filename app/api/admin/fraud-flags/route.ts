@@ -11,7 +11,7 @@ export async function GET() {
   const service = await createServiceClient()
   const { data, error } = await service
     .from('fraud_flags')
-    .select('id, track_id, user_id, flag_type, level, created_at, tracks ( id, title )')
+    .select('id, track_id, user_id, flag_type, level, created_at, tracks ( id, title, fraud_suspended )')
     .eq('resolved', false)
     .order('created_at', { ascending: false })
 

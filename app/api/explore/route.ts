@@ -27,6 +27,7 @@ export async function GET() {
     .lte('cumulative_plays', MAX_PLAYS)
     .eq('in_distribution', true)
     .eq('review_status', 'approved')
+    .eq('fraud_suspended', false)
     .limit(50)
 
   if (error) {

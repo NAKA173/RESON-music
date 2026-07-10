@@ -31,6 +31,7 @@ export default function ProfilePage() {
   const [searchResults, setSearchResults] = useState<TrackOption[]>([])
   const [bestTracksError, setBestTracksError] = useState('')
   const [bestTracksSaved, setBestTracksSaved] = useState(false)
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([])
 
   useEffect(() => {
     fetch('/api/profile')
@@ -44,7 +45,16 @@ export default function ProfilePage() {
         setLoading(false)
       })
     loadBestTracks()
+    fetch('/api/profile/suggested-tags')
+      .then((r) => r.json())
+      .then((d) => setSuggestedTags(d.suggested_tags ?? []))
   }, [])
+
+  function addSuggestedTag(tag: string) {
+    const current = personaTags.split(',').map((t) => t.trim()).filter(Boolean)
+    if (current.includes(tag) || current.length >= 10) return
+    setPersonaTags([...current, tag].join(', '))
+  }
 
   function loadBestTracks() {
     fetch('/api/best-tracks')
@@ -167,6 +177,23 @@ export default function ProfilePage() {
                 placeholder="例: シティポップ, 夜更かし, ギターロック"
                 className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm placeholder-[var(--faint)] focus:outline-none"
               />
+              {suggestedTags.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-[var(--faint)]">聴取データからの提案（自己申告に追加するかはあなた次第です）</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {suggestedTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => addSuggestedTag(tag)}
+                        className="rounded-full border border-[var(--line)] px-2.5 py-1 text-xs text-[var(--dim)] hover:border-[var(--accent)] hover:text-[var(--text)]"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {error && <p className="text-xs text-red-400">{error}</p>}
             {saved && <p className="text-xs text-[var(--accent)]">保存しました</p>}

@@ -52,6 +52,11 @@ async function raiseFlag(
     flag_type: flagType,
     level,
   })
+
+  // level 2（停止）：楽曲を一時非公開にする。level 3（BAN）は人力審査後の判断のため自動化しない
+  if (level === 2) {
+    await supabase.from('tracks').update({ fraud_suspended: true }).eq('id', trackId)
+  }
 }
 
 /**

@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 
-export type NotificationType = 'follow' | 'like' | 'comment' | 'mention' | 'support' | 'new_track' | 'balance_threshold' | 'message'
+export type NotificationType = 'follow' | 'like' | 'comment' | 'mention' | 'support' | 'new_track' | 'balance_threshold' | 'message' | 'monthly_report'
 
 export async function createNotification(params: {
   userId: string

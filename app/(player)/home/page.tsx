@@ -35,6 +35,7 @@ const navItems = [
   { href: '/notifications', label: '通知', icon: '🔔' },
   { href: '/wrapped', label: '年間まとめ', icon: '🎁' },
   { href: '/curators', label: 'キュレーター', icon: '🔎' },
+  { href: '/boost-ranking', label: '週間ブースト', icon: '🚀' },
   { href: '/messages', label: 'メッセージ', icon: '✉' },
 ]
 

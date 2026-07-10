@@ -331,7 +331,12 @@ Support+の実装：
 注意：Stripeの実用上の最低決済額（JPY 50円）と30円という単価には実装上の懸念が残る（要検証・本番導入前に解決必須）
 
 UIの分離：❤️ボタンとブーストボタン（ロケットモチーフ🚀）は視覚的に完全に別物として実装する
-週間ブーストランキング：絶対数ではなく先週比の伸び率ベース（累計再生数500未満の楽曲は対象外）— 未実装
+
+週間ブーストランキング（絶対数ではなく先週比の伸び率ベース。累計再生数500未満の楽曲は対象外）：
+  lib/boost/ranking.ts の computeGrowthRate(thisWeek, lastWeek) - 純粋関数（テスト済み）。
+  前週ゼロ件でもゼロ除算せず「今週の伸び」を評価できるよう thisWeek / (lastWeek + 1) で算出。
+  API: app/api/boost/weekly-ranking（GET・公開）
+  UI: app/(player)/boost-ranking/page.tsx
 ```
 
 ---
@@ -439,8 +444,10 @@ Support+: 1,000円  高音質・応援ボーナス
   2. app/api/student/verify/confirm  コード確認（試行5回まで）→ users.student_verified = true
   3. 認証済みの場合のみ app/api/stripe/checkout で plan='student' のCheckoutを許可
 
-未解決：メール配信基盤が未構築のため、確認コードの実際の送信経路は未実装
-  （本番導入前に解決必須。SMS認証はSupabase Auth経由のため対象外・既存のまま維持）
+メール配信：lib/email.ts の sendEmail()（Resend API）。RESEND_API_KEY未設定の環境
+  （ローカル/テスト）では送信をスキップしコンソール出力のみに留める設計（決済系の
+  PaymentProviderと同じ「未設定時はno-op」パターン）。本番ではRESEND_API_KEY /
+  RESEND_FROM_EMAIL の設定が必要（SMS認証はSupabase Auth経由のため対象外・既存のまま維持）。
 ```
 
 ---
@@ -768,8 +775,9 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   ・プラン重み係数の注記・raw_score合成式・分配額の算出式・楽曲別の分配対象状況（100再生の
   閾値）を表示。「分配計算の計算式はパブリックページで常時公開」という実装ルールに対応する
   アーティスト本人向けの詳細ビュー（/dashboard は概要、/report は計算根拠の内訳に特化）。
-  新規の月次通知（分配確定時にアーティストへ通知を送る仕組み）は未実装（既存のSNS通知機構
-  との連携は今後の課題）。
+  月次通知：notifications.type='monthly_report' を追加し、lib/distribution/batch.ts の
+  runMonthlyDistribution 内で distribution_yen > 0 のアーティストへ確定時に送信する
+  （既存のSNS通知機構=createNotification()をそのまま再利用）。
 ```
 
 ---
@@ -818,8 +826,15 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
       IP単位・ユーザー単位に集計し、同一IP大量再生と再生間隔の機械的パターン
       （detectMechanicalPattern・純粋関数・テスト済み）を検知してフラグを立てる。
     app/api/fraud/run/route.ts（CRON_SECRET認証・POST）で手動/Cron実行。
-  フラグの解除（resolved=true への更新）・level 2/3の実際の非公開化ロジックは
-    未実装（人力審査ダッシュボードでの運用を想定・Phase 4の課題として持ち越し）。
+  level 2（停止）の非公開化：tracks.fraud_suspended bool を追加し、raiseFlag()が
+    level=2のフラグを立てた瞬間に対象楽曲を自動でfraud_suspended=trueにする。
+    公開のリスナー向け一覧（tracks/list, explore, heat-candidates）は
+    fraud_suspended=falseのみ表示する（review_status='approved'条件と併用）。
+    level 3（BAN）は自動化せず人力審査後の判断のままとする（仕様通り）。
+  フラグの解除・配信再開：人力審査ダッシュボード（app/(admin)/admin/page.tsx）の
+    「不正検知」タブから resolved=true への更新、および配信停止中の楽曲は
+    「解決して配信を再開」ボタンでfraud_suspended=falseに戻せる
+    （app/api/admin/fraud-flags/resolve）。
 ```
 
 ---
@@ -894,7 +909,7 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   - [x] 支援者感謝ページ（詳細は上記節）
 
 - [ ] **Phase 3**（6〜8ヶ月）学生・決済拡張
-  - [x] Studentプラン + .ed.jp認証（コード確認フローのみ実装。メール送信経路は未実装・要解決）
+  - [x] Studentプラン + .ed.jp認証（メール送信はResend経由。RESEND_API_KEY未設定時はno-op）
   - [ ] コンビニ払い（Stripe Konbini・30日前から審査申請）
   - [x] ペアレンタル決済フロー（トークン方式・詳細は上記節。本番導入前にStripe利用規約上の懸念を確認）
   - [ ] ギフトコード
@@ -930,10 +945,12 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
 
 音楽人格（UserProfile）：
   user_profiles（display_name / bio / persona_tags[] / avatar_url）
-  MVPはユーザー自己申告のタグ編集のみ。聴取データ（play_events）からの
-  自動算出は未実装（Phase 4以降の課題として持ち越し）。
+  persona_tags自体は自己申告制のまま維持し、聴取データ（play_events × track_genres）
+  から上位5ジャンルを「提案タグ」として算出しユーザーが選んで追加できるようにした
+  （自動で上書き・強制はしない）。
   API: app/api/profile/route.ts（GET自分or?user_id=他人・PATCH自分のみ）
-  UI:  app/(player)/profile/page.tsx
+       app/api/profile/suggested-tags（GET・本人のみ。sec_factor>0の再生を重み付け集計）
+  UI:  app/(player)/profile/page.tsx（提案タグをチップ表示・クリックで追加）
 
 ブロック/通報：
   blocks は一方向で保存（blocker_id視点のみ・RLSでブロックした側のみ参照可）。
@@ -1035,7 +1052,7 @@ ANTHROPIC_API_KEY=
 | 5 | JASRAC包括契約（弁護士） | 高 | Phase 3以降のカタログ |
 | 6 | 未成年アーティストの親権者同意フロー（自己申告制の最小実装は完了。実在確認は未実装） | 中 | Phase 0の登録設計 |
 | 7 | AcoustIDの利用規約・商用利用条件 | 中 | Phase 1の審査フロー |
-| 8 | メール配信基盤の選定（.ed.jp確認コード送信用） | 高 | Studentプラン認証フローの本番稼働 |
+| 8 | メール配信基盤（Resend採用・実装済み。本番用のRESEND_API_KEY発行が残課題） | 低 | Studentプラン認証フローの本番稼働 |
 
 ---
 

@@ -27,7 +27,7 @@ interface FraudFlag {
   flag_type: string
   level: number
   created_at: string
-  tracks: { id: string; title: string } | null
+  tracks: { id: string; title: string; fraud_suspended: boolean } | null
 }
 
 interface Report {
@@ -104,11 +104,11 @@ export default function AdminPage() {
     setTracks((prev) => prev.filter((t) => t.id !== id))
   }
 
-  async function resolveFlag(id: string) {
+  async function resolveFlag(id: string, unsuspend: boolean) {
     await fetch('/api/admin/fraud-flags/resolve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, unsuspend }),
     })
     setFlags((prev) => prev.filter((f) => f.id !== id))
   }
@@ -217,11 +217,24 @@ export default function AdminPage() {
               flags.map((f) => (
                 <div key={f.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium">{f.flag_type}<span className="ml-2 text-xs text-zinc-500">level {f.level}</span></p>
+                    <p className="font-medium">
+                      {f.flag_type}
+                      <span className="ml-2 text-xs text-zinc-500">level {f.level}</span>
+                      {f.tracks?.fraud_suspended && <span className="ml-2 text-xs text-red-400">配信停止中</span>}
+                    </p>
                     <p className="text-xs text-zinc-500">{new Date(f.created_at).toLocaleDateString('ja-JP')}</p>
                   </div>
                   <p className="text-sm text-zinc-400">{f.tracks?.title ?? '不明な楽曲'}</p>
-                  <button onClick={() => resolveFlag(f.id)} className="text-xs bg-white text-black px-3 py-1.5 rounded-lg font-semibold">解決済みにする</button>
+                  <div className="flex gap-2">
+                    <button onClick={() => resolveFlag(f.id, false)} className="text-xs border border-zinc-700 px-3 py-1.5 rounded-lg">
+                      解決済みにする
+                    </button>
+                    {f.tracks?.fraud_suspended && (
+                      <button onClick={() => resolveFlag(f.id, true)} className="text-xs bg-white text-black px-3 py-1.5 rounded-lg font-semibold">
+                        解決して配信を再開
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
