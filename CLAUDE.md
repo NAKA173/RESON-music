@@ -942,9 +942,9 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   app/api/posts のフィード除外に適用）。
   isBlockedEitherWay() はUUID形式を正規表現で検証してから .or() フィルタに
   埋め込む（フィルタ構文インジェクション対策）。
-  reports は保存のみ（status: pending/reviewed/dismissed）。人力審査ダッシュ
-  ボードは未実装（(admin) は空ディレクトリのまま）。status更新はservice role経由
-  のみ想定。
+  reports は保存のみ（status: pending/reviewed/dismissed）。トリアージは
+  人力審査ダッシュボード（app/(admin)/admin/page.tsx）から行う（詳細は上記
+  「人力審査ダッシュボード」節）。status更新はservice role経由のみ。
   API: app/api/blocks/route.ts（GET/POST/DELETE。ブロック時に双方向フォローを解除）
        app/api/reports/route.ts（POST。target_type: post/comment/user/artist）
   UI:  app/(player)/feed/page.tsx の投稿カードに「⋯」メニュー（報告する/ブロックする）
