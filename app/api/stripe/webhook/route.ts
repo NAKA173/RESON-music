@@ -86,7 +86,7 @@ async function handleTipSucceeded(
   providerChargeId: string,
   metadata: Record<string, string>
 ) {
-  const { track_id, user_id, net_yen } = metadata
+  const { track_id, user_id, net_yen, track_plays_at_support } = metadata
   if (!track_id || !user_id || !net_yen) return
 
   // 冪等: payment_id で重複チェック
@@ -102,6 +102,7 @@ async function handleTipSucceeded(
     user_id,
     amount_yen: Number(net_yen),
     payment_id: providerChargeId,
+    track_plays_at_support: track_plays_at_support ? Number(track_plays_at_support) : null,
   })
 
   // Support+ は月末の settle_support_plus_tips で精算するため、ここでは即時加算しない

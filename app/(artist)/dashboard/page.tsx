@@ -62,6 +62,9 @@ export default function DashboardPage() {
   const [payoutError, setPayoutError] = useState('')
   const [payoutLoading, setPayoutLoading] = useState(false)
   const [albums, setAlbums] = useState<AlbumSummary[]>([])
+  const [lyricsEditingId, setLyricsEditingId] = useState<string | null>(null)
+  const [lyricsDraft, setLyricsDraft] = useState('')
+  const [lyricsSaving, setLyricsSaving] = useState(false)
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [editingBank, setEditingBank] = useState(false)
   const [bankForm, setBankForm] = useState<BankAccount>({
@@ -101,6 +104,29 @@ export default function DashboardPage() {
     fetch('/api/artist/bank-account')
       .then((r) => r.json())
       .then((d) => setBankAccount(d.bank_account))
+  }
+
+  function toggleLyricsEditor(trackId: string) {
+    if (lyricsEditingId === trackId) {
+      setLyricsEditingId(null)
+      return
+    }
+    setLyricsEditingId(trackId)
+    setLyricsDraft('')
+    fetch(`/api/tracks/${trackId}/lyrics`)
+      .then((r) => r.json())
+      .then((d) => setLyricsDraft(d.lyrics ?? ''))
+  }
+
+  async function saveLyrics(trackId: string) {
+    setLyricsSaving(true)
+    await fetch(`/api/tracks/${trackId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lyrics: lyricsDraft }),
+    })
+    setLyricsSaving(false)
+    setLyricsEditingId(null)
   }
 
   async function requestPayout() {
@@ -284,29 +310,66 @@ export default function DashboardPage() {
             <p className="text-sm text-zinc-500">まだ楽曲がありません</p>
           ) : (
             data.tracks.map((t) => (
-              <div key={t.id} className="flex items-center justify-between text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="truncate">{t.title}</p>
-                  <div className="flex gap-2 mt-0.5">
-                    {t.review_status === 'pending' && (
-                      <span className="text-xs text-yellow-500">審査中</span>
-                    )}
-                    {t.review_status === 'rejected' && (
-                      <span className="text-xs text-red-400">却下</span>
-                    )}
-                    {t.ai_generated && (
-                      <span className="text-xs text-yellow-600">AI生成</span>
-                    )}
-                    {!t.in_distribution && (
-                      <span className="text-xs text-zinc-600">
-                        分配対象外（{t.cumulative_plays}/100再生）
-                      </span>
-                    )}
+              <div key={t.id} className="border-b border-zinc-800 pb-2 last:border-0 last:pb-0 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate">{t.title}</p>
+                    <div className="flex gap-2 mt-0.5">
+                      {t.review_status === 'pending' && (
+                        <span className="text-xs text-yellow-500">審査中</span>
+                      )}
+                      {t.review_status === 'rejected' && (
+                        <span className="text-xs text-red-400">却下</span>
+                      )}
+                      {t.ai_generated && (
+                        <span className="text-xs text-yellow-600">AI生成</span>
+                      )}
+                      {!t.in_distribution && (
+                        <span className="text-xs text-zinc-600">
+                          分配対象外（{t.cumulative_plays}/100再生）
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => toggleLyricsEditor(t.id)}
+                      className="text-xs text-zinc-500 hover:text-white underline"
+                    >
+                      歌詞
+                    </button>
+                    <span className="text-zinc-400">
+                      {t.cumulative_plays.toLocaleString()}再生
+                    </span>
                   </div>
                 </div>
-                <span className="text-zinc-400 ml-3 shrink-0">
-                  {t.cumulative_plays.toLocaleString()}再生
-                </span>
+                {lyricsEditingId === t.id && (
+                  <div className="space-y-2">
+                    <textarea
+                      value={lyricsDraft}
+                      onChange={(e) => setLyricsDraft(e.target.value)}
+                      rows={6}
+                      maxLength={10000}
+                      placeholder="歌詞を入力…"
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400 resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveLyrics(t.id)}
+                        disabled={lyricsSaving}
+                        className="text-xs rounded-lg bg-white text-black px-3 py-1.5 font-semibold disabled:opacity-40"
+                      >
+                        {lyricsSaving ? '保存中…' : '保存する'}
+                      </button>
+                      <button
+                        onClick={() => setLyricsEditingId(null)}
+                        className="text-xs rounded-lg border border-zinc-700 px-3 py-1.5"
+                      >
+                        閉じる
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}

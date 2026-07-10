@@ -1,12 +1,12 @@
+import { requireAdmin } from '@/lib/admin/auth'
 import { createServiceClient } from '@/lib/supabase/server'
 import { reviewTrack } from '@/lib/moderation/tracks'
 import { NextRequest, NextResponse } from 'next/server'
 
-// 管理者専用エンドポイント（楽曲登録審査の承認/却下・手動運用を前提とした最小実装）
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { isAdmin } = await requireAdmin()
+  if (!isAdmin) {
+    return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
 
   const { track_id, action } = await req.json()
@@ -14,10 +14,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'track_id と action("approved"|"rejected") は必須です' }, { status: 400 })
   }
 
-  const supabase = await createServiceClient()
+  const service = await createServiceClient()
 
   try {
-    const track = await reviewTrack(supabase, track_id, action)
+    const track = await reviewTrack(service, track_id, action)
     return NextResponse.json({ ok: true, track })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 })

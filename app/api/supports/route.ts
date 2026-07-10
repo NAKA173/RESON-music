@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { data: track } = await supabase
     .from('tracks')
-    .select('id')
+    .select('id, cumulative_plays')
     .eq('id', track_id)
     .single()
 
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       track_id,
       user_id: user.id,
       amount_yen: 0,
+      track_plays_at_support: track.cumulative_plays,
     })
     return NextResponse.json({ ok: true, type: 'heart' })
   }
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
   if (plan === 'support_plus') {
     const { data: support } = await supabase
       .from('supports')
-      .insert({ track_id, user_id: user.id, amount_yen })
+      .insert({ track_id, user_id: user.id, amount_yen, track_plays_at_support: track.cumulative_plays })
       .select('id')
       .single()
 
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
   const { clientSecret } = await paymentProvider.createOneTimeCharge({
     amountYen: chargeYen,
     customerId: customerId ?? undefined,
-    metadata: { track_id, user_id: user.id, plan, net_yen: String(amount_yen) },
+    metadata: { track_id, user_id: user.id, plan, net_yen: String(amount_yen), track_plays_at_support: String(track.cumulative_plays) },
   })
 
   return NextResponse.json({

@@ -32,6 +32,9 @@ const navItems = [
   { href: '/library', label: 'ライブラリ', icon: '♥' },
   { href: '/playlists', label: 'プレイリスト', icon: '☰' },
   { href: '/notifications', label: '通知', icon: '🔔' },
+  { href: '/wrapped', label: '年間まとめ', icon: '🎁' },
+  { href: '/curators', label: 'キュレーター', icon: '🔎' },
+  { href: '/messages', label: 'メッセージ', icon: '✉' },
 ]
 
 const artists = [

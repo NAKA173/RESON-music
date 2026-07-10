@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { runMonthlyDistribution } from '@/lib/distribution/batch'
+import { runCuratorBatch } from '@/lib/curator'
 import { NextRequest, NextResponse } from 'next/server'
 
 // 管理者専用エンドポイント（Vercel Cron or 手動実行）
@@ -23,6 +24,9 @@ export async function POST(req: NextRequest) {
 
   // 追加ブースト（サブスク請求合算分）も同時精算
   await supabase.rpc('settle_monthly_boosts', { p_year_month: year_month })
+
+  // キュレーターランク（先見性スコア）の集計も同時実行
+  await runCuratorBatch(supabase)
 
   return NextResponse.json({ ok: true, ...result })
 }

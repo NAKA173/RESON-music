@@ -54,6 +54,23 @@ export function Player({ track, onEnded, nextTrackId, controls }: PlayerProps) {
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
   const compressorRef = useRef<DynamicsCompressorNode | null>(null)
 
+  const [lyricsOpen, setLyricsOpen] = useState(false)
+  const [lyrics, setLyrics] = useState<string | null | undefined>(undefined)
+
+  function toggleLyrics() {
+    if (!lyricsOpen && lyrics === undefined) {
+      fetch(`/api/tracks/${track.id}/lyrics`)
+        .then((r) => r.json())
+        .then((d) => setLyrics(d.lyrics))
+    }
+    setLyricsOpen((v) => !v)
+  }
+
+  useEffect(() => {
+    setLyrics(undefined)
+    setLyricsOpen(false)
+  }, [track.id])
+
   useEffect(() => {
     setNormalizeOn(localStorage.getItem(NORMALIZE_STORAGE_KEY) === 'true')
   }, [])
@@ -283,8 +300,8 @@ export function Player({ track, onEnded, nextTrackId, controls }: PlayerProps) {
         <div className="bg-white h-0.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
 
-      {/* 音量ノーマライズ */}
-      <div className="flex justify-center">
+      {/* 音量ノーマライズ・歌詞 */}
+      <div className="flex justify-center gap-2">
         <button
           onClick={toggleNormalize}
           title="曲間の音量差を自動で抑える（簡易ノーマライズ）"
@@ -294,7 +311,27 @@ export function Player({ track, onEnded, nextTrackId, controls }: PlayerProps) {
         >
           🎚️ ノーマライズ{normalizeOn ? 'ON' : 'OFF'}
         </button>
+        <button
+          onClick={toggleLyrics}
+          className={`text-xs rounded-full border px-3 py-1 transition ${
+            lyricsOpen ? 'border-white text-white' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'
+          }`}
+        >
+          📝 歌詞
+        </button>
       </div>
+
+      {lyricsOpen && (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 max-h-64 overflow-y-auto">
+          {lyrics === undefined ? (
+            <p className="text-xs text-zinc-500">読み込み中…</p>
+          ) : lyrics ? (
+            <p className="text-sm text-zinc-300 whitespace-pre-wrap">{lyrics}</p>
+          ) : (
+            <p className="text-xs text-zinc-500">歌詞は登録されていません</p>
+          )}
+        </div>
+      )}
 
       {/* 応援・ブースト */}
       <div className="flex flex-wrap justify-center gap-2">

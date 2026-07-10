@@ -47,6 +47,7 @@ users (
   student_verified bool DEFAULT false,
   parent_user_id uuid REFERENCES users(id),  -- ペアレンタル決済
   currency text DEFAULT 'JPY',               -- 将来の多通貨対応
+  is_admin bool DEFAULT false,               -- 人力審査ダッシュボードの権限判定
   created_at timestamptz
 )
 
@@ -653,6 +654,97 @@ UI: app/(artist)/supporters/page.tsx（ダッシュボードからリンク）
   現状はアップロードされた音声ファイルをそのまま配信しており、複数ビットレートへの
   トランスコードパイプライン（ffmpeg等）が存在しないため、選択可能な音質は1種類のみ。
   実装するには、アップロード時に複数ビットレートへ変換してR2に保存する処理が別途必要。
+
+歌詞表示・入力：
+  tracks.lyrics text（nullable・最大10000文字）。
+  入力: app/api/tracks/[trackId]（PATCH { lyrics }・本人のみ）。
+    app/(artist)/dashboard の楽曲リストから「歌詞」リンクでインライン編集。
+  表示: app/api/tracks/[trackId]/lyrics（GET・誰でも閲覧可）。
+    components/Player.tsx に「📝 歌詞」トグルを追加し、クリック時に遅延取得する
+    （曲一覧のレスポンスに歌詞本文を含めない設計。長文になり得るため）。
+
+年間まとめ（Wrapped的な振り返り）：
+  play_events を年単位で集計するのみで新規テーブルは不要。
+  API: app/api/wrapped?year=YYYY（GET・本人のみ）
+    合計再生時間・再生回数・完聴数・よく聴いたアーティスト/楽曲トップ10を算出。
+  UI: app/(player)/wrapped/page.tsx（年切替タブ付き）
+```
+
+---
+
+## キュレーターランク（先見性スコア・Phase 4）
+
+```
+「まだ無名だった楽曲を早く見つけて応援した」リスナーに加点する仕組み。
+supports.track_plays_at_support（応援した時点のtracks.cumulative_playsのスナップ
+ショット）を新設し、後からその楽曲が伸びたかどうかを判定できるようにした。
+
+lib/curator/index.ts:
+  computeCuratorPoints(playsAtSupport) - 純粋関数（テスト済み）。100再生未満での
+    応援ほど加点が大きい（0再生時点=10点、閾値以上=0点）。閾値は不正検知の閾値と
+    異なり非公開にする必要はないため、コード内の定数として公開している。
+  runCuratorBatch(supabase) - counted_for_curator=falseの応援のうち、対象楽曲が
+    SUCCESS_THRESHOLD（500再生）に達したものだけを集計してcurator_scoresに加点する。
+    まだ伸びていない曲の応援はカウント済みフラグを立てず、次回以降のバッチで再評価する。
+
+API:
+  app/api/curator/run（CRON_SECRET認証。app/api/distribution/run内でも同時実行）
+  app/api/curator/leaderboard（GET・公開）
+UI: app/(player)/curators/page.tsx（ランキング一覧）
+```
+
+---
+
+## 人力審査ダッシュボード（Phase 4）
+
+```
+これまで「管理UIは作らずCRON_SECRET運用で統一」という方針だったが、実際に
+ブラウザから審査業務を行うためのダッシュボードを新設した（CRON_SECRET運用の
+バッチAPIは自動化用として並存させる）。
+
+users.is_admin bool DEFAULT false を新設。管理者ロールの判定はこのフラグのみで、
+別途の管理者専用ログインフローは作らず、既存のSupabase Auth（電話番号OTP）で
+ログイン済みのユーザーがis_admin=trueであればダッシュボードを利用できる。
+is_adminをtrueにする操作自体はDB直接操作のみ（UIからの権限昇格経路は存在しない）。
+
+lib/admin/auth.ts: requireAdmin() - セッションユーザーがis_admin=trueか判定する。
+  実際のデータ読み書きはservice role client（RLSをバイパス）で行う
+  （fraud_flags・reports・payout_requestsはRLSが本人限定/service role限定のため、
+  通常のクライアントでは管理者でも読み書きできない）。
+
+API（app/api/admin/以下。すべてrequireAdmin()でガード）：
+  artists・artists/review    アーティスト登録審査（既存のapp/api/artist/reviewと同等）
+  tracks・tracks/review      楽曲配信審査。lib/moderation/tracks.ts の reviewTrack()
+                              を既存のapp/api/tracks/reviewと共有し、承認時の新曲通知
+                              ロジックが分岐しないようにしている
+  fraud-flags・fraud-flags/resolve  不正検知フラグの解決
+  reports・reports/resolve   SNS通報のトリアージ（reviewed/dismissed）
+  payouts・payouts/process   出金申請（lib/payout/process.ts のprocessPayoutRequestを共有）
+
+UI: app/(admin)/admin/page.tsx（タブ切り替え：アーティスト審査/楽曲審査/不正検知/
+  通報/出金申請）。/api/admin/me で is_admin を確認できない場合は「権限がありません」
+  と表示するのみ（リダイレクトはしない・最小実装）。
+```
+
+---
+
+## ダイレクトメッセージ（SNS系機能の充実・Phase 2拡張）
+
+```
+1:1のダイレクトメッセージ。既存のposts/comments（公開の投稿・コメント）とは別に、
+非公開のユーザー間コミュニケーション手段を追加した。
+
+direct_messages（sender_id, recipient_id, body, read_at）。RLSは送信者・受信者
+本人のみ読める。送信はlib/sns/blocks.tsのisBlockedEitherWay()でブロック関係を
+チェックしてから許可する（既存のfollows/commentsと同じ抑制パターン）。
+
+notifications.type に 'message' を追加（既存のcheck制約を更新するマイグレーション）。
+
+API:
+  app/api/messages（GET ?with=<user_id> スレッド取得+既読化・POST送信）
+  app/api/messages/conversations（GET 会話一覧・最新メッセージのプレビュー付き）
+  app/api/users/search（GET ?q= display_name部分一致検索。新規会話開始用）
+UI: app/(player)/messages/page.tsx（?with=<user_id>クエリ方式。会話一覧+スレッド表示）
 ```
 
 ---
@@ -798,10 +890,10 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   - [x] 不正検知バッチ（同一IP・機械的パターンの再走査。詳細は上記「不正検知」節）
 
 - [ ] **Phase 4**（8〜12ヶ月）エコノミー
-  - [ ] キュレーターランク（先見性スコア）
+  - [x] キュレーターランク（先見性スコア。詳細は上記節）
   - [ ] 招待リクエスト機能
   - [ ] 創設アーティスト制度（バッジ・重み+0.2）
-  - [ ] 人力審査ダッシュボード
+  - [x] 人力審査ダッシュボード（詳細は上記節）
   - [ ] 多通貨対応（DBは最初からcurrency付き）
 
 ---
