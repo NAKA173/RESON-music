@@ -29,6 +29,14 @@ export default function RootLayout({
       lang="ja"
       className={`${zenKaku.variable} ${notoSans.variable} h-full antialiased`}
     >
+      <head>
+        {/* ページ描画前にテーマを適用し、切り替え時のフラッシュを防ぐ */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('reson_theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

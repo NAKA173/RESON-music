@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 interface Settings {
   is_private: boolean
@@ -109,6 +110,17 @@ export default function SettingsPage() {
           {saving && <span className="text-xs text-zinc-500">保存中…</span>}
         </div>
         <p className="text-sm text-zinc-500 mb-8">Resonの各機能について、参加するかどうかを選べます。</p>
+
+        {/* 表示設定 */}
+        <Section title="表示">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 flex items-center justify-between">
+            <div>
+              <p className="text-[15px] font-medium text-zinc-300">ライト / ダークモード</p>
+              <p className="text-[13px] text-zinc-500 mt-0.5">ホーム画面など一部のページに適用されます</p>
+            </div>
+            <ThemeToggle />
+          </div>
+        </Section>
 
         {/* アカウント公開設定 */}
         <Section title="アカウントの公開設定">

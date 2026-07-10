@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Player } from '@/components/Player'
 import { usePlayerQueue } from '@/lib/player/queue'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import Link from 'next/link'
 
 interface Track {
@@ -159,6 +160,7 @@ export default function PlayerPage() {
             <Link href="/upload" className="text-sm text-[var(--dim)] hover:text-[var(--text)]">
               + アップロード
             </Link>
+            <ThemeToggle />
           </div>
 
           {/* プレイヤー / ピックアップ */}

@@ -17,6 +17,23 @@
   --foreground: var(--text);
 }
 
+/* ライトモード（data-theme="light" を <html> に付与して切り替える。
+   ハードコードされた bg-black/zinc系クラスを使うページ（ダッシュボード等）は
+   まだCSS変数化されていないため対象外・既知の制約） */
+:root[data-theme="light"] {
+  --bg: #fafaf9;
+  --panel: #ffffff;
+  --surface: #f2f2f0;
+  --surface2: #e8e8e5;
+  --line: rgba(15, 15, 15, 0.1);
+  --line-md: rgba(15, 15, 15, 0.16);
+  --text: #16160f;
+  --dim: rgba(22, 22, 15, 0.62);
+  --faint: rgba(22, 22, 15, 0.4);
+  --accent: #6b8f0e;
+  --ink: #ffffff;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -655,6 +655,18 @@ UI: app/(artist)/supporters/page.tsx（ダッシュボードからリンク）
   トランスコードパイプライン（ffmpeg等）が存在しないため、選択可能な音質は1種類のみ。
   実装するには、アップロード時に複数ビットレートへ変換してR2に保存する処理が別途必要。
 
+ライト/ダークモード切替：
+  CSS変数（app/globals.css）で :root[data-theme="light"] にライト用の値を定義し、
+  <html>要素のdata-theme属性で切り替える。localStorage（reson_theme）に保存し、
+  app/layout.tsx のheadに埋め込んだ同期スクリプトで描画前に適用する
+  （切り替え時のフラッシュ防止。React hydrationより前に実行する必要があるため
+  dangerouslySetInnerHTMLの生スクリプトを使用）。
+  components/ThemeToggle.tsx（ホーム画面トップバー・設定ページに配置）。
+  既知の制約：ダッシュボード・アップロード・登録・レポート等のアーティスト向け
+  ページはCSS変数化されておらずbg-black等を直接指定しているため、このトグルは
+  リスナー向けページ（ホーム・探索・フィード・アルバム・プレイリスト等）にのみ
+  反映される。全ページのCSS変数化は別途の対応が必要。
+
 歌詞表示・入力：
   tracks.lyrics text（nullable・最大10000文字）。
   入力: app/api/tracks/[trackId]（PATCH { lyrics }・本人のみ）。
