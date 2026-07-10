@@ -42,6 +42,7 @@ interface AlbumSummary {
   title: string
   released_at: string | null
   release_type: 'single' | 'ep' | 'album'
+  cover_r2_key: string | null
 }
 
 const RELEASE_TYPE_LABEL: Record<string, string> = { single: 'シングル', ep: 'EP', album: 'アルバム' }
@@ -407,9 +408,16 @@ export default function DashboardPage() {
                 href={`/albums?id=${a.id}`}
                 className="flex justify-between items-center text-sm border-b border-zinc-800 pb-2 last:border-0 last:pb-0 hover:text-white"
               >
-                <span className="truncate">
-                  {a.title}
-                  <span className="ml-2 text-xs text-zinc-500">{RELEASE_TYPE_LABEL[a.release_type] ?? 'アルバム'}</span>
+                <span className="flex items-center gap-2 truncate">
+                  {a.cover_r2_key ? (
+                    <img src={`/api/albums/${a.id}/cover`} alt="" className="h-8 w-8 rounded object-cover shrink-0" />
+                  ) : (
+                    <span className="h-8 w-8 rounded bg-zinc-800 shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {a.title}
+                    <span className="ml-2 text-xs text-zinc-500">{RELEASE_TYPE_LABEL[a.release_type] ?? 'アルバム'}</span>
+                  </span>
                 </span>
                 <span className="text-zinc-500 text-xs">
                   {a.released_at ? new Date(a.released_at).toLocaleDateString('ja-JP') : '未発表日'}

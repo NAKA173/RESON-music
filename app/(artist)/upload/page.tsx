@@ -18,6 +18,7 @@ interface Album {
   id: string
   title: string
   release_type: 'single' | 'ep' | 'album'
+  cover_r2_key: string | null
 }
 
 export default function UploadPage() {
@@ -41,6 +42,9 @@ export default function UploadPage() {
   const [trackNumber, setTrackNumber] = useState('')
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const [albumCoverUploading, setAlbumCoverUploading] = useState(false)
+  const [albumCoverDone, setAlbumCoverDone] = useState(false)
+  const albumCoverInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/genres')
@@ -96,6 +100,37 @@ export default function UploadPage() {
     setError('')
     setFile(f)
     if (!title) setTitle(f.name.replace(/\.[^.]+$/, ''))
+  }
+
+  async function onAlbumCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f || !albumId) return
+    if (!ALLOWED_IMAGE_TYPES.includes(f.type)) {
+      setError('ジャケット画像はJPEG/PNG/WebP形式のみ対応しています')
+      return
+    }
+    setError('')
+    setAlbumCoverUploading(true)
+    setAlbumCoverDone(false)
+    const metaRes = await fetch('/api/albums/cover-upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ album_id: albumId, content_type: f.type }),
+    })
+    const meta = await metaRes.json()
+    if (!metaRes.ok) {
+      setAlbumCoverUploading(false)
+      setError(meta.error)
+      return
+    }
+    await fetch(meta.upload_url, {
+      method: 'PUT',
+      headers: { 'Content-Type': f.type },
+      body: f,
+    })
+    setAlbumCoverUploading(false)
+    setAlbumCoverDone(true)
+    loadAlbums()
   }
 
   function onCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -345,6 +380,30 @@ export default function UploadPage() {
                 />
               </div>
             )}
+            {albumId && (
+              <div className="mt-3">
+                <label className="block text-xs text-zinc-500 mb-1">アルバムジャケット（任意）</label>
+                <div
+                  onClick={() => albumCoverInputRef.current?.click()}
+                  className="border border-dashed border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-500 hover:border-zinc-500 cursor-pointer transition"
+                >
+                  <input
+                    ref={albumCoverInputRef}
+                    type="file"
+                    accept={ALLOWED_IMAGE_TYPES.join(',')}
+                    className="hidden"
+                    onChange={onAlbumCoverChange}
+                  />
+                  {albumCoverUploading
+                    ? 'アップロード中…'
+                    : albumCoverDone
+                      ? 'ジャケットを更新しました（クリックで再度変更）'
+                      : albums.find((a) => a.id === albumId)?.cover_r2_key
+                        ? '設定済み（クリックで変更）'
+                        : 'クリックしてアルバムのジャケット画像を設定'}
+                </div>
+              </div>
+            )}
             <div className="mt-2 flex gap-2">
               <input
                 type="text"
@@ -376,7 +435,7 @@ export default function UploadPage() {
 
           {/* ジャケット画像 */}
           <div>
-            <label className="block text-sm text-zinc-400 mb-2">ジャケット画像（任意）</label>
+            <label className="block text-sm text-zinc-400 mb-2">楽曲ジャケット画像（任意・シングル用）</label>
             <div
               onClick={() => coverInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition ${

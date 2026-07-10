@@ -20,6 +20,10 @@ export function buildCoverR2Key(artistId: string, trackId: string, ext: string) 
   return `covers/${artistId}/${trackId}.${ext}`
 }
 
+export function buildAlbumCoverR2Key(artistId: string, albumId: string, ext: string) {
+  return `album-covers/${artistId}/${albumId}.${ext}`
+}
+
 /** アップロード用署名付きURL（5分有効） */
 export async function getUploadUrl(key: string, contentType: string) {
   const cmd = new PutObjectCommand({

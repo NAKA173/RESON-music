@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('albums')
-    .select('id, artist_id, title, cover_url, released_at, release_type, created_at, artists ( id, name )')
+    .select('id, artist_id, title, cover_url, cover_r2_key, released_at, release_type, created_at, artists ( id, name )')
     .order('released_at', { ascending: false, nullsFirst: false })
 
   if (artistId) {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       released_at: released_at || null,
       release_type: release_type || 'album',
     })
-    .select('id, artist_id, title, cover_url, released_at, release_type, created_at')
+    .select('id, artist_id, title, cover_url, cover_r2_key, released_at, release_type, created_at')
     .single()
 
   if (error) {

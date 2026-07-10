@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ albu
 
   const { data: album } = await supabase
     .from('albums')
-    .select('id, artist_id, title, cover_url, released_at, release_type, artists ( id, name )')
+    .select('id, artist_id, title, cover_url, cover_r2_key, released_at, release_type, artists ( id, name )')
     .eq('id', albumId)
     .single()
 

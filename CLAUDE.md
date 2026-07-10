@@ -112,7 +112,8 @@ albums (
   id uuid PK,
   artist_id uuid REFERENCES artists(id),
   title text,
-  cover_url text,
+  cover_url text,          -- 外部URL直接指定（任意・cover_r2_key優先）
+  cover_r2_key text,       -- ジャケット画像（R2アップロード）
   release_type text DEFAULT 'album', -- single/ep/album
   released_at date,
   created_at timestamptz
@@ -525,6 +526,17 @@ tracks.track_number：アルバムに紐付けた楽曲の曲順（nullable・�
     既存の components/Player を再利用し、アルバム内の楽曲を順に連続再生できる
     （曲送りは既存のonEnded連鎖の仕組みをそのまま利用）。
   ダッシュボードのアルバム一覧（app/(artist)/dashboard）から遷移可能。
+
+アルバムジャケット画像：
+  albums.cover_r2_key（R2オブジェクトキー。既存のcover_url（外部URL直接指定）とは
+  併存させ、cover_r2_keyがある場合はそちらを優先表示する）。
+  アップロードは楽曲・楽曲ジャケットと同じ署名付きURL方式：
+    app/api/albums/cover-upload-url（POST・アルバム所有アーティスト本人のみ）
+    app/api/albums/[albumId]/cover（GET・署名付きURLへ302リダイレクト）
+  UI: app/(artist)/upload のアルバム選択時に表示される専用アップロードUI
+    （楽曲ジャケットとは別物。アルバム自体に紐づくため、楽曲アップロードとは
+    非同期にいつでも設定・変更可能）。
+  表示: app/(player)/albums（アルバム詳細）・app/(artist)/dashboard（一覧サムネイル）。
 ```
 
 ---

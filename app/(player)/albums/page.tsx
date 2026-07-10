@@ -19,6 +19,7 @@ interface AlbumDetail {
     id: string
     title: string
     cover_url: string | null
+    cover_r2_key: string | null
     released_at: string | null
     release_type: 'single' | 'ep' | 'album'
     artists: { id: string; name: string } | null
@@ -79,16 +80,25 @@ function AlbumDetailContent() {
           ← ホームへ
         </Link>
 
-        <div>
-          <span className="text-xs rounded-full border border-[var(--line)] px-2 py-0.5 text-[var(--dim)]">
-            {RELEASE_TYPE_LABEL[album.release_type] ?? 'アルバム'}
-          </span>
-          <h1 className="font-display mt-2 text-2xl font-bold">{album.title}</h1>
-          <p className="mt-1 text-sm text-[var(--dim)]">{album.artists?.name ?? '不明なアーティスト'}</p>
-          <p className="mt-1 text-xs text-[var(--faint)]">
-            {tracks.length}曲・合計 {formatDuration(total_duration_sec)}
-            {album.released_at && ` ・ ${new Date(album.released_at).toLocaleDateString('ja-JP')}`}
-          </p>
+        <div className="flex gap-4">
+          {(album.cover_r2_key || album.cover_url) && (
+            <img
+              src={album.cover_r2_key ? `/api/albums/${album.id}/cover` : album.cover_url!}
+              alt={album.title}
+              className="h-24 w-24 shrink-0 rounded-lg object-cover border border-[var(--line)]"
+            />
+          )}
+          <div>
+            <span className="text-xs rounded-full border border-[var(--line)] px-2 py-0.5 text-[var(--dim)]">
+              {RELEASE_TYPE_LABEL[album.release_type] ?? 'アルバム'}
+            </span>
+            <h1 className="font-display mt-2 text-2xl font-bold">{album.title}</h1>
+            <p className="mt-1 text-sm text-[var(--dim)]">{album.artists?.name ?? '不明なアーティスト'}</p>
+            <p className="mt-1 text-xs text-[var(--faint)]">
+              {tracks.length}曲・合計 {formatDuration(total_duration_sec)}
+              {album.released_at && ` ・ ${new Date(album.released_at).toLocaleDateString('ja-JP')}`}
+            </p>
+          </div>
         </div>
 
         {current && (
