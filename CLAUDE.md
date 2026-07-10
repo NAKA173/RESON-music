@@ -500,6 +500,8 @@ RESON実装（楽曲単位の審査。アーティスト登録自体の審査＝
   署名付きURL方式（app/api/tracks/cover-upload-url、JPEG/PNG/WebPのみ許可）。
   表示は app/api/tracks/[trackId]/cover が署名付きGET URLへ302リダイレクト
   （音声ストリーミングと同じパターン）。app/(artist)/upload にアップロードUIを追加。
+  アルバムに紐付けた楽曲はアルバム側のジャケット（albums.cover_r2_key）が使われる
+  ため、このUIは album_id が未選択（＝シングル）の場合のみ表示する。
 
 不正コンテンツの判定基準（何を審査するか）は運営の目視確認を前提とし、システム上の
   自動判定ロジックは持たない。

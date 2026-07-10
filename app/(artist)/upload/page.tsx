@@ -73,6 +73,7 @@ export default function UploadPage() {
     setNewAlbumTitle('')
     loadAlbums()
     setAlbumId(data.album.id)
+    setCoverFile(null)
   }
 
   function toggleGenre(id: string) {
@@ -208,8 +209,8 @@ export default function UploadPage() {
 
     setProgress(50)
 
-    // ジャケット画像（任意）
-    if (coverFile) {
+    // ジャケット画像（任意・アルバムに紐付けた場合はアルバム側のジャケットを使うため送らない）
+    if (coverFile && !albumId) {
       setStatusMsg('ジャケット画像をアップロード中…')
       const coverMetaRes = await fetch('/api/tracks/cover-upload-url', {
         method: 'POST',
@@ -357,7 +358,10 @@ export default function UploadPage() {
             <label className="block text-sm text-zinc-400 mb-2">アルバム（任意）</label>
             <select
               value={albumId}
-              onChange={(e) => setAlbumId(e.target.value)}
+              onChange={(e) => {
+                setAlbumId(e.target.value)
+                if (e.target.value) setCoverFile(null)
+              }}
               className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
             >
               <option value="">アルバムなし（シングル）</option>
@@ -433,29 +437,32 @@ export default function UploadPage() {
             </div>
           </div>
 
-          {/* ジャケット画像 */}
-          <div>
-            <label className="block text-sm text-zinc-400 mb-2">楽曲ジャケット画像（任意・シングル用）</label>
-            <div
-              onClick={() => coverInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition ${
-                coverFile ? 'border-zinc-500 bg-zinc-900' : 'border-zinc-700 hover:border-zinc-500'
-              }`}
-            >
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept={ALLOWED_IMAGE_TYPES.join(',')}
-                className="hidden"
-                onChange={onCoverChange}
-              />
-              {coverFile ? (
-                <p className="text-sm text-zinc-300">{coverFile.name}</p>
-              ) : (
-                <p className="text-sm text-zinc-500">クリックして画像を選択（JPEG/PNG/WebP）</p>
-              )}
+          {/* ジャケット画像（アルバムに紐付ける場合はアルバム側のジャケットが使われるため、
+              単独曲＝シングルとしてアップロードする場合のみ表示する） */}
+          {!albumId && (
+            <div>
+              <label className="block text-sm text-zinc-400 mb-2">ジャケット画像（任意）</label>
+              <div
+                onClick={() => coverInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition ${
+                  coverFile ? 'border-zinc-500 bg-zinc-900' : 'border-zinc-700 hover:border-zinc-500'
+                }`}
+              >
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept={ALLOWED_IMAGE_TYPES.join(',')}
+                  className="hidden"
+                  onChange={onCoverChange}
+                />
+                {coverFile ? (
+                  <p className="text-sm text-zinc-300">{coverFile.name}</p>
+                ) : (
+                  <p className="text-sm text-zinc-500">クリックして画像を選択（JPEG/PNG/WebP）</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* AI生成フラグ */}
           <label className="flex items-center gap-3 cursor-pointer">
