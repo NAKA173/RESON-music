@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BoostButton } from './BoostButton'
 import { SupportButton } from './SupportButton'
 import { SupportGraph } from './SupportGraph'
+import type { RepeatMode } from '@/lib/player/queue'
 
 interface Track {
   id: string
@@ -12,9 +13,23 @@ interface Track {
   artists: { name: string } | null
 }
 
+interface PlayerControls {
+  onPrev?: () => void
+  onNext?: () => void
+  hasNext?: boolean
+  hasPrev?: boolean
+  shuffleOn?: boolean
+  onToggleShuffle?: () => void
+  repeatMode?: RepeatMode
+  onCycleRepeat?: () => void
+  queueCount?: number
+}
+
 interface PlayerProps {
   track: Track
   onEnded?: () => void
+  nextTrackId?: string
+  controls?: PlayerControls
 }
 
 function formatTime(sec: number) {
@@ -23,13 +38,25 @@ function formatTime(sec: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function Player({ track, onEnded }: PlayerProps) {
+const NORMALIZE_STORAGE_KEY = 'reson_normalize_audio'
+
+export function Player({ track, onEnded, nextTrackId, controls }: PlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const preloadRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(track.duration_sec)
   const startedAtRef = useRef<number | null>(null)
   const logSentRef = useRef(false)
+
+  const [normalizeOn, setNormalizeOn] = useState(false)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const compressorRef = useRef<DynamicsCompressorNode | null>(null)
+
+  useEffect(() => {
+    setNormalizeOn(localStorage.getItem(NORMALIZE_STORAGE_KEY) === 'true')
+  }, [])
 
   useEffect(() => {
     // track が変わったらリセット
@@ -42,6 +69,59 @@ export function Player({ track, onEnded }: PlayerProps) {
       audioRef.current.load()
     }
   }, [track.id])
+
+  // 次の曲を先読みしておくことで、曲送り時の無音区間を短縮する（近似的なギャップレス再生）
+  useEffect(() => {
+    if (nextTrackId && preloadRef.current) {
+      preloadRef.current.src = `/api/tracks/${nextTrackId}/stream`
+      preloadRef.current.load()
+    }
+  }, [nextTrackId])
+
+  function ensureAudioGraph(): boolean {
+    if (audioCtxRef.current) return true
+    if (!audioRef.current) return false
+    try {
+      const AudioContextCtor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const ctx = new AudioContextCtor()
+      const source = ctx.createMediaElementSource(audioRef.current)
+      const compressor = ctx.createDynamicsCompressor()
+      compressor.threshold.value = -24
+      compressor.knee.value = 30
+      compressor.ratio.value = 12
+      compressor.attack.value = 0.003
+      compressor.release.value = 0.25
+      audioCtxRef.current = ctx
+      sourceNodeRef.current = source
+      compressorRef.current = compressor
+      source.connect(ctx.destination)
+      return true
+      // R2側でCORSが許可されていない場合、createMediaElementSourceが例外を投げることがある。
+      // その場合はノーマライズ機能を無効のまま通常再生を継続する。
+    } catch {
+      return false
+    }
+  }
+
+  function toggleNormalize() {
+    if (!ensureAudioGraph()) return
+    const ctx = audioCtxRef.current
+    const source = sourceNodeRef.current
+    const compressor = compressorRef.current
+    if (!ctx || !source || !compressor) return
+    ctx.resume()
+    const next = !normalizeOn
+    source.disconnect()
+    if (next) {
+      source.connect(compressor)
+      compressor.connect(ctx.destination)
+    } else {
+      compressor.disconnect()
+      source.connect(ctx.destination)
+    }
+    setNormalizeOn(next)
+    localStorage.setItem(NORMALIZE_STORAGE_KEY, String(next))
+  }
 
   function togglePlay() {
     const audio = audioRef.current
@@ -73,9 +153,17 @@ export function Player({ track, onEnded }: PlayerProps) {
   }
 
   function onEnded_() {
-    setPlaying(false)
     const played = audioRef.current?.currentTime ?? duration
     sendPlayLog(played, true)
+
+    if (controls?.repeatMode === 'one' && audioRef.current) {
+      audioRef.current.currentTime = 0
+      audioRef.current.play()
+      logSentRef.current = false
+      startedAtRef.current = Date.now()
+      return
+    }
+    setPlaying(false)
     onEnded?.()
   }
 
@@ -109,7 +197,9 @@ export function Player({ track, onEnded }: PlayerProps) {
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         preload="metadata"
+        crossOrigin="anonymous"
       />
+      <audio ref={preloadRef} preload="auto" className="hidden" />
 
       {/* トラック情報 */}
       <div>
@@ -134,7 +224,27 @@ export function Player({ track, onEnded }: PlayerProps) {
       </div>
 
       {/* コントロール */}
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center gap-4">
+        {controls && (
+          <button
+            onClick={controls.onToggleShuffle}
+            disabled={!controls.onToggleShuffle}
+            title="シャッフル"
+            className={`text-sm ${controls.shuffleOn ? 'text-white' : 'text-zinc-500'} hover:text-white disabled:opacity-30 transition`}
+          >
+            🔀
+          </button>
+        )}
+        {controls && (
+          <button
+            onClick={controls.onPrev}
+            disabled={!controls.onPrev || controls.hasPrev === false}
+            title="前の曲"
+            className="text-lg text-zinc-300 hover:text-white disabled:opacity-30 transition"
+          >
+            ⏮
+          </button>
+        )}
         <button
           onClick={togglePlay}
           className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center hover:bg-zinc-200 transition text-lg"
@@ -142,11 +252,48 @@ export function Player({ track, onEnded }: PlayerProps) {
         >
           {playing ? '⏸' : '▶'}
         </button>
+        {controls && (
+          <button
+            onClick={controls.onNext}
+            disabled={!controls.onNext || controls.hasNext === false}
+            title="次の曲"
+            className="text-lg text-zinc-300 hover:text-white disabled:opacity-30 transition"
+          >
+            ⏭
+          </button>
+        )}
+        {controls && (
+          <button
+            onClick={controls.onCycleRepeat}
+            disabled={!controls.onCycleRepeat}
+            title="リピート"
+            className={`text-sm ${controls.repeatMode !== 'off' ? 'text-white' : 'text-zinc-500'} hover:text-white disabled:opacity-30 transition`}
+          >
+            {controls.repeatMode === 'one' ? '🔂' : '🔁'}
+          </button>
+        )}
       </div>
+
+      {controls?.queueCount ? (
+        <p className="text-center text-xs text-zinc-500">次に再生するキュー: {controls.queueCount}曲</p>
+      ) : null}
 
       {/* プログレス表示 */}
       <div className="w-full bg-zinc-800 rounded-full h-0.5">
         <div className="bg-white h-0.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+      </div>
+
+      {/* 音量ノーマライズ */}
+      <div className="flex justify-center">
+        <button
+          onClick={toggleNormalize}
+          title="曲間の音量差を自動で抑える（簡易ノーマライズ）"
+          className={`text-xs rounded-full border px-3 py-1 transition ${
+            normalizeOn ? 'border-white text-white' : 'border-zinc-700 text-zinc-500 hover:border-zinc-500'
+          }`}
+        >
+          🎚️ ノーマライズ{normalizeOn ? 'ON' : 'OFF'}
+        </button>
       </div>
 
       {/* 応援・ブースト */}

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Player } from '@/components/Player'
+import { usePlayerQueue } from '@/lib/player/queue'
 
 interface AlbumTrack {
   id: string
@@ -45,7 +46,7 @@ function AlbumDetailContent() {
   const albumId = searchParams.get('id') ?? ''
   const [data, setData] = useState<AlbumDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [currentIdx, setCurrentIdx] = useState(0)
+  const queue = usePlayerQueue(data?.tracks ?? [])
 
   useEffect(() => {
     if (!albumId) { setLoading(false); return }
@@ -71,7 +72,9 @@ function AlbumDetailContent() {
   }
 
   const { album, tracks, total_duration_sec } = data
-  const current = tracks[currentIdx] ?? null
+  const current = queue.current
+  const currentIdx = queue.baseIndex
+  const nextTrackId = queue.queue[0]?.id ?? (queue.shuffleOn ? undefined : tracks[currentIdx + 1]?.id)
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] px-4 py-10 sm:px-8">
@@ -109,30 +112,50 @@ function AlbumDetailContent() {
               duration_sec: current.duration_sec,
               artists: album.artists,
             }}
-            onEnded={() => setCurrentIdx((i) => Math.min(i + 1, tracks.length - 1))}
+            onEnded={queue.playNext}
+            nextTrackId={nextTrackId}
+            controls={{
+              onPrev: queue.playPrev,
+              onNext: queue.playNext,
+              hasNext: queue.hasNext,
+              hasPrev: currentIdx > 0,
+              shuffleOn: queue.shuffleOn,
+              onToggleShuffle: queue.toggleShuffle,
+              repeatMode: queue.repeatMode,
+              onCycleRepeat: queue.cycleRepeat,
+              queueCount: queue.queue.length,
+            }}
           />
         )}
 
         <div className="space-y-1">
           {tracks.map((t, i) => (
-            <button
+            <div
               key={t.id}
-              onClick={() => setCurrentIdx(i)}
-              className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center justify-between ${
+              className={`flex items-center gap-2 w-full px-4 py-3 rounded-xl transition ${
                 i === currentIdx ? 'bg-[var(--surface)]' : 'hover:bg-[var(--panel)]'
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-xs text-[var(--faint)] w-5 shrink-0">{t.track_number ?? i + 1}</span>
-                <span className={`truncate text-sm font-medium ${i === currentIdx ? 'text-[var(--accent)]' : ''}`}>
-                  {t.title}
-                  {t.ai_generated && <span className="ml-2 text-xs text-yellow-500">AI</span>}
+              <button onClick={() => queue.playAt(i)} className="flex-1 flex items-center justify-between min-w-0 text-left">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xs text-[var(--faint)] w-5 shrink-0">{t.track_number ?? i + 1}</span>
+                  <span className={`truncate text-sm font-medium ${i === currentIdx ? 'text-[var(--accent)]' : ''}`}>
+                    {t.title}
+                    {t.ai_generated && <span className="ml-2 text-xs text-yellow-500">AI</span>}
+                  </span>
+                </div>
+                <span className="text-xs text-[var(--faint)] shrink-0 ml-3">
+                  {Math.floor(t.duration_sec / 60)}:{String(t.duration_sec % 60).padStart(2, '0')}
                 </span>
-              </div>
-              <span className="text-xs text-[var(--faint)] shrink-0 ml-3">
-                {Math.floor(t.duration_sec / 60)}:{String(t.duration_sec % 60).padStart(2, '0')}
-              </span>
-            </button>
+              </button>
+              <button
+                onClick={() => queue.addToQueue(t)}
+                title="次に再生するキューへ追加"
+                className="shrink-0 text-xs text-[var(--faint)] hover:text-[var(--text)] px-2"
+              >
+                +キュー
+              </button>
+            </div>
           ))}
         </div>
       </div>

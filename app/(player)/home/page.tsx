@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Player } from '@/components/Player'
+import { usePlayerQueue } from '@/lib/player/queue'
 import Link from 'next/link'
 
 interface Track {
@@ -28,6 +29,9 @@ const navItems = [
   { href: '/search', label: 'さがす', icon: '⌕' },
   { href: '/explore', label: '探索', icon: '◎' },
   { href: '/feed', label: 'フィード', icon: '✎' },
+  { href: '/library', label: 'ライブラリ', icon: '♥' },
+  { href: '/playlists', label: 'プレイリスト', icon: '☰' },
+  { href: '/notifications', label: '通知', icon: '🔔' },
 ]
 
 const artists = [
@@ -52,8 +56,8 @@ export default function PlayerPage() {
   const [heatTracks, setHeatTracks] = useState<HeatTrack[]>([])
   const [forYouTracks, setForYouTracks] = useState<ForYouTrack[]>([])
   const [exploreTracks, setExploreTracks] = useState<ExploreTrack[]>([])
-  const [currentIdx, setCurrentIdx] = useState(0)
   const [loading, setLoading] = useState(true)
+  const queue = usePlayerQueue(tracks)
 
   useEffect(() => {
     fetch('/api/tracks/list')
@@ -73,7 +77,10 @@ export default function PlayerPage() {
       .then((d) => setExploreTracks((d.tracks ?? []).slice(0, 3)))
   }, [])
 
-  const current = tracks[currentIdx] ?? null
+  const current = queue.current
+  const currentIdx = queue.baseIndex
+  const nextIdx = queue.shuffleOn ? undefined : currentIdx + 1
+  const nextTrackId = queue.queue[0]?.id ?? (nextIdx !== undefined ? tracks[nextIdx]?.id : undefined)
 
   return (
     <div className="flex min-h-screen bg-[var(--bg)] text-[var(--text)]">
@@ -157,7 +164,19 @@ export default function PlayerPage() {
           ) : current ? (
             <Player
               track={current}
-              onEnded={() => setCurrentIdx((i) => Math.min(i + 1, tracks.length - 1))}
+              onEnded={queue.playNext}
+              nextTrackId={nextTrackId}
+              controls={{
+                onPrev: queue.playPrev,
+                onNext: queue.playNext,
+                hasNext: queue.hasNext,
+                hasPrev: currentIdx > 0,
+                shuffleOn: queue.shuffleOn,
+                onToggleShuffle: queue.toggleShuffle,
+                repeatMode: queue.repeatMode,
+                onCycleRepeat: queue.cycleRepeat,
+                queueCount: queue.queue.length,
+              }}
             />
           ) : (
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] py-20 text-center text-[var(--faint)]">
@@ -181,7 +200,7 @@ export default function PlayerPage() {
                     key={t.id}
                     onClick={() => {
                       const idx = tracks.findIndex((tr) => tr.id === t.id)
-                      if (idx >= 0) setCurrentIdx(idx)
+                      if (idx >= 0) queue.playAt(idx)
                     }}
                     className="flex w-40 shrink-0 flex-col rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)]"
                   >
@@ -217,7 +236,7 @@ export default function PlayerPage() {
                     key={t.id}
                     onClick={() => {
                       const idx = tracks.findIndex((tr) => tr.id === t.id)
-                      if (idx >= 0) setCurrentIdx(idx)
+                      if (idx >= 0) queue.playAt(idx)
                     }}
                     className="flex w-40 shrink-0 flex-col rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-left transition hover:border-[var(--accent)]"
                   >
@@ -295,28 +314,36 @@ export default function PlayerPage() {
             <section className="space-y-1">
               <h2 className="font-display mb-2 text-lg font-bold">すべての楽曲</h2>
               {tracks.map((t, i) => (
-                <button
+                <div
                   key={t.id}
-                  onClick={() => setCurrentIdx(i)}
-                  className={`w-full text-left px-4 py-3 rounded-xl transition ${
+                  className={`flex items-center gap-2 w-full text-left px-4 py-3 rounded-xl transition ${
                     i === currentIdx ? 'bg-[var(--surface)]' : 'hover:bg-[var(--panel)]'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0">
-                      <p className={`truncate text-sm font-medium ${i === currentIdx ? 'text-[var(--accent)]' : 'text-[var(--text)]'}`}>
-                        {t.title}
-                      </p>
-                      <p className="truncate text-xs text-[var(--dim)]">
-                        {t.artists?.name ?? '不明'}
-                        {t.ai_generated && <span className="ml-2 text-yellow-500">AI</span>}
-                      </p>
+                  <button onClick={() => queue.playAt(i)} className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className={`truncate text-sm font-medium ${i === currentIdx ? 'text-[var(--accent)]' : 'text-[var(--text)]'}`}>
+                          {t.title}
+                        </p>
+                        <p className="truncate text-xs text-[var(--dim)]">
+                          {t.artists?.name ?? '不明'}
+                          {t.ai_generated && <span className="ml-2 text-yellow-500">AI</span>}
+                        </p>
+                      </div>
+                      <div className="ml-3 shrink-0 text-xs text-[var(--faint)]">
+                        {Math.floor(t.duration_sec / 60)}:{String(t.duration_sec % 60).padStart(2, '0')}
+                      </div>
                     </div>
-                    <div className="ml-3 shrink-0 text-xs text-[var(--faint)]">
-                      {Math.floor(t.duration_sec / 60)}:{String(t.duration_sec % 60).padStart(2, '0')}
-                    </div>
-                  </div>
-                </button>
+                  </button>
+                  <button
+                    onClick={() => queue.addToQueue(t)}
+                    title="次に再生するキューへ追加"
+                    className="shrink-0 text-xs text-[var(--faint)] hover:text-[var(--text)] px-2"
+                  >
+                    +キュー
+                  </button>
+                </div>
               ))}
             </section>
           )}

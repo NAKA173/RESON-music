@@ -130,6 +130,23 @@ best_tracks (
   UNIQUE (user_id, track_id)
 )
 
+-- 自由な曲数のプレイリスト（best_tracksとは別物・上限なし）
+playlists (
+  id uuid PK,
+  user_id uuid REFERENCES users(id),
+  title text,
+  is_public bool DEFAULT true,
+  created_at timestamptz, updated_at timestamptz
+)
+playlist_tracks (
+  id uuid PK,
+  playlist_id uuid REFERENCES playlists(id) ON DELETE CASCADE,
+  track_id uuid REFERENCES tracks(id),
+  position int,
+  added_at timestamptz,
+  UNIQUE (playlist_id, track_id)
+)
+
 -- 共同楽曲の分配設定
 track_splits (
   id uuid PK,
@@ -586,6 +603,56 @@ UI: app/(artist)/supporters/page.tsx（ダッシュボードからリンク）
 
 匿名リスナー（user_profiles未登録）は「名無しのリスナー」と表示。
 個別のお礼メッセージ送信機能は未実装（一覧表示のみ）。
+```
+
+---
+
+## プレイヤー機能拡張（既存音楽サブスクとの機能ギャップ対応）
+
+```
+自由な曲数のプレイリスト（ベストトラックランキング＝Topster風・上限10曲とは別物）：
+  playlists（user_id, title, is_public）/ playlist_tracks（playlist_id, track_id, position）
+  RLS: is_public=trueは誰でも読める・編集は本人のみ。
+  API: app/api/playlists（GET一覧/POST作成）
+       app/api/playlists/[playlistId]（GET詳細+is_owner・PATCH・DELETE）
+       app/api/playlists/[playlistId]/tracks（POST追加・PUT並べ替え=全件入れ替え・DELETE削除）
+  UI: app/(player)/playlists（一覧+作成）
+      app/(player)/playlists/detail（?id=クエリ方式。楽曲検索→追加・▲▼並べ替え・削除）
+
+キュー再生・シャッフル・リピート（lib/player/queue.ts の usePlayerQueue フックに集約）：
+  ページ側（ホーム・アルバム詳細・プレイリスト詳細・ライブラリ）が曲リストを持ち、
+  このフックが「今どれを再生するか」を管理する（キュー優先 → シャッフル順 or 順番 → リピート）。
+  repeatMode: 'off' | 'all' | 'one'。shuffleOnはトグル時にFisher-Yatesで順序を再生成。
+  addToQueue()で曲を「次に再生」キューに追加（各一覧の「+キュー」ボタンから）。
+  components/Player.tsx の controls props で ⏮⏭🔀🔁 ボタンを表示（controls未指定なら非表示のまま）。
+
+ギャップレス再生（近似実装。真のサンプル精度ギャップレスではない）：
+  次に再生する曲のstream URLを隠しaudio要素で先読み（preload="auto"）し、
+  ブラウザのHTTPキャッシュを温めることで曲送り時の無音区間を短縮する。
+
+音量ノーマライズ（簡易実装。EBU R128等の厳密なラウドネス測定は行わない）：
+  Web Audio API（AudioContext + DynamicsCompressorNode）で再生中の音声にゆるやかな
+  コンプレッションをかけ、曲間の音量差を緩和する。ボタンでON/OFF切替（localStorageに保存）。
+  R2バケットのCORS設定がcreateMediaElementSourceを許可していない場合は例外を捕捉し、
+  通常再生を継続する（ノーマライズ機能のみ無効化）。
+
+新曲リリース通知：
+  notifications.type='new_track' は既存だったが発火箇所がなかった。
+  app/api/tracks/review（審査承認時）で、対象アーティストをフォローしているユーザー全員に
+  createNotification()を呼ぶよう追加。
+  app/(player)/notifications/page.tsx（通知一覧・既存の/api/notificationsを利用。
+  これまで一覧表示するUIが存在しなかった）。
+
+いいね集約（マイライブラリ）：
+  ❤️応援ボタン（supports.amount_yen=0）でハートした曲を集約する。
+  SNS用の汎用likesテーブル（posts/artists等への「いいね」）とは別物。
+  API: app/api/library/liked-tracks（GET・本人のみ）
+  UI: app/(player)/library/page.tsx
+
+未実装：音質選択（ビットレート切替）
+  現状はアップロードされた音声ファイルをそのまま配信しており、複数ビットレートへの
+  トランスコードパイプライン（ffmpeg等）が存在しないため、選択可能な音質は1種類のみ。
+  実装するには、アップロード時に複数ビットレートへ変換してR2に保存する処理が別途必要。
 ```
 
 ---
