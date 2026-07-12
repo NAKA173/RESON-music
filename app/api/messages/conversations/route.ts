@@ -10,7 +10,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('direct_messages')
-    .select('sender_id, recipient_id, body, read_at, created_at')
+    .select('sender_id, recipient_id, body, track_id, read_at, created_at')
     .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
     .order('created_at', { ascending: false })
     .limit(200)
@@ -24,7 +24,7 @@ export async function GET() {
     const partnerId = m.sender_id === user.id ? m.recipient_id : m.sender_id
     if (!byPartner.has(partnerId)) {
       byPartner.set(partnerId, {
-        last_body: m.body,
+        last_body: m.body || (m.track_id ? '♪ 曲を送信しました' : ''),
         last_at: m.created_at,
         unread: m.recipient_id === user.id && !m.read_at,
       })

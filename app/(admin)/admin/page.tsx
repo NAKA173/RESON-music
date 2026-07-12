@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-type Tab = 'artists' | 'tracks' | 'fraud' | 'reports' | 'payouts'
+type Tab = 'artists' | 'tracks' | 'fraud' | 'reports' | 'payouts' | 'founding'
 
 interface PendingArtist {
   id: string
@@ -55,7 +55,15 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'fraud', label: '不正検知' },
   { key: 'reports', label: '通報' },
   { key: 'payouts', label: '出金申請' },
+  { key: 'founding', label: '創設アーティスト' },
 ]
+
+interface ArtistSearchResult {
+  id: string
+  name: string
+  review_status: string
+  founding_artist: boolean
+}
 
 export default function AdminPage() {
   const [authState, setAuthState] = useState<'checking' | 'denied' | 'ok'>('checking')
@@ -66,6 +74,8 @@ export default function AdminPage() {
   const [flags, setFlags] = useState<FraudFlag[]>([])
   const [reports, setReports] = useState<Report[]>([])
   const [payouts, setPayouts] = useState<PayoutRequest[]>([])
+  const [foundingQuery, setFoundingQuery] = useState('')
+  const [foundingResults, setFoundingResults] = useState<ArtistSearchResult[]>([])
 
   useEffect(() => {
     fetch('/api/admin/me')
@@ -129,6 +139,22 @@ export default function AdminPage() {
       body: JSON.stringify({ request_id: id, action }),
     })
     setPayouts((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  async function searchFoundingArtists() {
+    if (!foundingQuery.trim()) { setFoundingResults([]); return }
+    const res = await fetch(`/api/admin/artists/search?q=${encodeURIComponent(foundingQuery)}`)
+    const data = await res.json()
+    setFoundingResults(data.artists ?? [])
+  }
+
+  async function toggleFounding(artistId: string, next: boolean) {
+    await fetch('/api/admin/artists/founding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artist_id: artistId, founding_artist: next }),
+    })
+    setFoundingResults((prev) => prev.map((a) => (a.id === artistId ? { ...a, founding_artist: next } : a)))
   }
 
   if (authState === 'checking') {
@@ -282,6 +308,42 @@ export default function AdminPage() {
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        {tab === 'founding' && (
+          <div className="space-y-3">
+            <p className="text-sm text-zinc-500">
+              アーティスト名で検索し、創設アーティストのバッジ付与/解除を行います（バッジのみ・分配重みへの反映は未実装）。
+            </p>
+            <div className="flex gap-2">
+              <input
+                value={foundingQuery}
+                onChange={(e) => setFoundingQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') searchFoundingArtists() }}
+                placeholder="アーティスト名で検索…"
+                className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none"
+              />
+              <button onClick={searchFoundingArtists} className="text-xs border border-zinc-700 px-4 py-2 rounded-lg">検索</button>
+            </div>
+            <div className="space-y-2">
+              {foundingResults.map((a) => (
+                <div key={a.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center justify-between">
+                  <p className="font-medium">
+                    {a.name}
+                    {a.founding_artist && <span className="ml-2 text-yellow-400">★ 創設アーティスト</span>}
+                  </p>
+                  <button
+                    onClick={() => toggleFounding(a.id, !a.founding_artist)}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold ${
+                      a.founding_artist ? 'border border-zinc-700 text-zinc-300' : 'bg-white text-black'
+                    }`}
+                  >
+                    {a.founding_artist ? '解除する' : 'バッジを付与'}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

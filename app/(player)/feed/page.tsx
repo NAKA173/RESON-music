@@ -13,6 +13,12 @@ interface Post {
   author_user_id: string
   author_artist_id: string | null
   tracks: { id: string; title: string } | null
+  artists: { id: string; name: string; founding_artist: boolean } | null
+}
+
+interface TrackOption {
+  id: string
+  title: string
   artists: { id: string; name: string } | null
 }
 
@@ -45,6 +51,9 @@ function FeedPageInner() {
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set())
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [hiddenPostIds, setHiddenPostIds] = useState<Set<string>>(new Set())
+  const [trackQuery, setTrackQuery] = useState('')
+  const [trackResults, setTrackResults] = useState<TrackOption[]>([])
+  const [attachedTrack, setAttachedTrack] = useState<TrackOption | null>(null)
 
   function loadFeed() {
     const url = genreId ? `/api/posts?genre_id=${genreId}` : '/api/posts'
@@ -55,6 +64,16 @@ function FeedPageInner() {
 
   useEffect(() => { loadFeed() }, [genreId])
 
+  useEffect(() => {
+    if (!trackQuery.trim()) { setTrackResults([]); return }
+    const timer = setTimeout(() => {
+      fetch(`/api/tracks/list?q=${encodeURIComponent(trackQuery)}`)
+        .then((r) => r.json())
+        .then((d) => setTrackResults(d.tracks ?? []))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [trackQuery])
+
   async function submitPost(e: React.FormEvent) {
     e.preventDefault()
     if (!body.trim()) return
@@ -63,12 +82,14 @@ function FeedPageInner() {
     const res = await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body, genre_id: genreId || undefined }),
+      body: JSON.stringify({ body, genre_id: genreId || undefined, track_id: attachedTrack?.id }),
     })
     const data = await res.json()
     setPosting(false)
     if (!res.ok) { setError(data.error); return }
     setBody('')
+    setAttachedTrack(null)
+    setTrackQuery('')
     loadFeed()
   }
 
@@ -162,6 +183,35 @@ function FeedPageInner() {
             placeholder="いま聴いている音楽について語る…"
             className="w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm placeholder-[var(--faint)] focus:outline-none"
           />
+          {attachedTrack ? (
+            <div className="mt-2 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs">
+              <span>♪ {attachedTrack.title} ・ {attachedTrack.artists?.name}</span>
+              <button type="button" onClick={() => setAttachedTrack(null)} className="text-[var(--faint)] hover:text-[var(--text)]">✕</button>
+            </div>
+          ) : (
+            <div className="mt-2">
+              <input
+                value={trackQuery}
+                onChange={(e) => setTrackQuery(e.target.value)}
+                placeholder="曲を検索して貼付…"
+                className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs placeholder-[var(--faint)] focus:outline-none"
+              />
+              {trackResults.length > 0 && (
+                <div className="mt-1 space-y-1">
+                  {trackResults.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => { setAttachedTrack(t); setTrackQuery(''); setTrackResults([]) }}
+                      className="block w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-[var(--surface)]"
+                    >
+                      {t.title} <span className="text-[var(--faint)]">・ {t.artists?.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
           <div className="mt-2 flex justify-end">
             <button
@@ -186,7 +236,9 @@ function FeedPageInner() {
               <div key={p.id} className="relative rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
                 <div className="flex items-start justify-between">
                   <p className="text-xs text-[var(--faint)]">
-                    {p.artists?.name ?? 'リスナー'} ・ {new Date(p.created_at).toLocaleDateString('ja-JP')}
+                    {p.artists?.name ?? 'リスナー'}
+                    {p.artists?.founding_artist && <span className="ml-1 text-[var(--accent)]">★</span>}
+                    {' '}・ {new Date(p.created_at).toLocaleDateString('ja-JP')}
                   </p>
                   <button
                     onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}
@@ -207,7 +259,9 @@ function FeedPageInner() {
                 )}
                 <p className="mt-2 whitespace-pre-wrap text-sm">{p.body}</p>
                 {p.tracks && (
-                  <p className="mt-2 text-xs text-[var(--accent)]">♪ {p.tracks.title}</p>
+                  <Link href={`/track?id=${p.tracks.id}`} className="mt-2 inline-block rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs text-[var(--accent)] hover:border-[var(--accent)]">
+                    ♪ {p.tracks.title}
+                  </Link>
                 )}
                 <div className="mt-3 flex gap-4 text-xs text-[var(--dim)]">
                   <button onClick={() => toggleLike(p.id)} className="hover:text-[var(--text)]">

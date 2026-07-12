@@ -2,6 +2,27 @@ import { createClient } from '@/lib/supabase/server'
 import { normalizeIsrc, isValidIsrc } from '@/lib/isrc'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET(req: NextRequest, { params }: { params: Promise<{ trackId: string }> }) {
+  const { trackId } = await params
+  const supabase = await createClient()
+
+  const { data: track } = await supabase
+    .from('tracks')
+    .select(`
+      id, title, duration_sec, ai_generated, cumulative_plays, album_id, review_status,
+      artists ( id, name, founding_artist ),
+      albums ( id, title, cover_r2_key, cover_url )
+    `)
+    .eq('id', trackId)
+    .single()
+
+  if (!track || track.review_status !== 'approved') {
+    return NextResponse.json({ error: '楽曲が見つかりません' }, { status: 404 })
+  }
+
+  return NextResponse.json({ track })
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ trackId: string }> }) {
   const { trackId } = await params
   const supabase = await createClient()

@@ -25,7 +25,7 @@ interface Track {
 }
 
 interface ReportData {
-  artist: { id: string; name: string; review_status: 'pending' | 'approved' | 'rejected' }
+  artist: { id: string; name: string; review_status: 'pending' | 'approved' | 'rejected'; founding_artist: boolean }
   balance: { balance_yen: number; dormant: boolean }
   distributions: Distribution[]
   tracks: Track[]
@@ -200,7 +200,12 @@ export default function DashboardPage() {
         {/* ヘッダー */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{data.artist.name}</h1>
+            <h1 className="text-2xl font-bold">
+              {data.artist.name}
+              {data.artist.founding_artist && (
+                <span title="創設アーティスト" className="ml-2 text-yellow-400">★</span>
+              )}
+            </h1>
             <p className="text-sm text-zinc-400">アーティストダッシュボード</p>
           </div>
           <div className="flex gap-2">

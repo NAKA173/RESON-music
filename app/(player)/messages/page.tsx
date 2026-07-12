@@ -17,12 +17,20 @@ interface Message {
   sender_id: string
   recipient_id: string
   body: string
+  track_id: string | null
   created_at: string
+  tracks: { id: string; title: string; artists: { id: string; name: string } | null } | null
 }
 
 interface UserResult {
   user_id: string
   display_name: string | null
+}
+
+interface TrackOption {
+  id: string
+  title: string
+  artists: { id: string; name: string } | null
 }
 
 function MessagesContent() {
@@ -37,6 +45,10 @@ function MessagesContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<UserResult[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [trackQuery, setTrackQuery] = useState('')
+  const [trackResults, setTrackResults] = useState<TrackOption[]>([])
+  const [attachedTrack, setAttachedTrack] = useState<TrackOption | null>(null)
+  const [showTrackPicker, setShowTrackPicker] = useState(false)
 
   useEffect(() => {
     loadConversations()
@@ -56,6 +68,16 @@ function MessagesContent() {
     }, 300)
     return () => clearTimeout(timer)
   }, [searchQuery])
+
+  useEffect(() => {
+    if (!trackQuery.trim()) { setTrackResults([]); return }
+    const timer = setTimeout(() => {
+      fetch(`/api/tracks/list?q=${encodeURIComponent(trackQuery)}`)
+        .then((r) => r.json())
+        .then((d) => setTrackResults(d.tracks ?? []))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [trackQuery])
 
   function loadConversations() {
     fetch('/api/messages/conversations')
@@ -77,16 +99,18 @@ function MessagesContent() {
   }
 
   async function send() {
-    if (!withUserId || !draft.trim()) return
+    if (!withUserId || (!draft.trim() && !attachedTrack)) return
     const res = await fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipient_id: withUserId, body: draft }),
+      body: JSON.stringify({ recipient_id: withUserId, body: draft, track_id: attachedTrack?.id }),
     })
     const data = await res.json()
     if (res.ok) {
       setMeId(data.message.sender_id)
       setDraft('')
+      setAttachedTrack(null)
+      setShowTrackPicker(false)
       loadThread(withUserId)
       loadConversations()
     }
@@ -154,18 +178,64 @@ function MessagesContent() {
                   {messages.map((m) => (
                     <div
                       key={m.id}
-                      className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${
+                      className={`max-w-[80%] rounded-xl px-3 py-2 text-sm space-y-1 ${
                         m.sender_id === meId
                           ? 'ml-auto bg-[var(--accent)] text-[var(--ink)]'
                           : 'bg-[var(--panel)] border border-[var(--line)]'
                       }`}
                     >
-                      {m.body}
+                      {m.body && <p>{m.body}</p>}
+                      {m.tracks && (
+                        <Link
+                          href={`/track?id=${m.tracks.id}`}
+                          className={`block rounded-lg px-2 py-1.5 text-xs underline ${
+                            m.sender_id === meId ? 'bg-black/10' : 'bg-[var(--surface)]'
+                          }`}
+                        >
+                          ♪ {m.tracks.title} ・ {m.tracks.artists?.name}
+                        </Link>
+                      )}
                     </div>
                   ))}
                   <div ref={bottomRef} />
                 </div>
+                {attachedTrack && (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs">
+                    <span>♪ {attachedTrack.title} ・ {attachedTrack.artists?.name}</span>
+                    <button onClick={() => setAttachedTrack(null)} className="text-[var(--faint)] hover:text-[var(--text)]">✕</button>
+                  </div>
+                )}
+                {showTrackPicker && !attachedTrack && (
+                  <div className="mt-2">
+                    <input
+                      value={trackQuery}
+                      onChange={(e) => setTrackQuery(e.target.value)}
+                      placeholder="曲を検索して貼付…"
+                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs placeholder-[var(--faint)] focus:outline-none"
+                    />
+                    {trackResults.length > 0 && (
+                      <div className="mt-1 space-y-1">
+                        {trackResults.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => { setAttachedTrack(t); setTrackQuery(''); setTrackResults([]); setShowTrackPicker(false) }}
+                            className="block w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-[var(--panel)]"
+                          >
+                            {t.title} <span className="text-[var(--faint)]">・ {t.artists?.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => setShowTrackPicker((v) => !v)}
+                    title="曲を貼付"
+                    className="rounded-lg border border-[var(--line)] px-3 py-2 text-sm hover:border-[var(--accent)]"
+                  >
+                    ♪
+                  </button>
                   <input
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
@@ -176,7 +246,7 @@ function MessagesContent() {
                   />
                   <button
                     onClick={send}
-                    disabled={!draft.trim()}
+                    disabled={!draft.trim() && !attachedTrack}
                     className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--ink)] disabled:opacity-40"
                   >
                     送信

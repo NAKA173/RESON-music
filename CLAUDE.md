@@ -789,6 +789,37 @@ API:
   app/api/messages/conversations（GET 会話一覧・最新メッセージのプレビュー付き）
   app/api/users/search（GET ?q= display_name部分一致検索。新規会話開始用）
 UI: app/(player)/messages/page.tsx（?with=<user_id>クエリ方式。会話一覧+スレッド表示）
+
+楽曲の貼付（投稿・DM共通の「紹介」機能）：
+  direct_messages.track_id を追加（postsは既存のtrack_idで対応済み）。本文と楽曲添付は
+  どちらか一方があればよい（本文のみ・楽曲のみ・両方、いずれも送信可能）。
+  フィード投稿の作成フォーム（app/(player)/feed）・DM送信フォーム（app/(player)/messages）
+  の両方に楽曲検索（/api/tracks/list?q=）→選択の同じUIパターンを実装。
+  貼付された楽曲は app/(player)/track（?id=<track_id>クエリ方式・新設の単曲再生ページ。
+  既存のcomponents/Playerを再利用し❤️・投げ銭・ブースト・歌詞もそのまま利用できる）への
+  リンクとして表示される。
+```
+
+---
+
+## 創設アーティスト制度（バッジのみ・Phase 4）
+
+```
+artists.founding_artist は既存カラムだったが、これを見る/更新するコードが一切なく
+死んだフィールドだった。今回は指示に従い「バッジのみ」実装し、分配重み+0.2への反映は
+見送る（別途の指示があるまで着手しない）。
+
+付与/解除：管理UI（app/(admin)/admin/page.tsx の「創設アーティスト」タブ）から
+  アーティスト名で検索してトグルする。app/api/admin/artists/search（検索）・
+  app/api/admin/artists/founding（付与/解除）。is_adminのみ操作可能。
+
+バッジ表示：★アイコンで以下に反映
+  app/(artist)/dashboard（本人のダッシュボードヘッダー）
+  app/(player)/feed（投稿者がアーティストの場合の投稿カード）
+  app/(player)/track（楽曲詳細ページのアーティスト名）
+  ホーム画面（app/(player)/home）の「注目のアーティスト」セクションは既存のハード
+  コードされたモックデータのままで、実データ（founding_artist）への接続は未対応
+  （既知の制約・別途対応が必要）。
 ```
 
 ---
@@ -944,7 +975,7 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
 - [ ] **Phase 4**（8〜12ヶ月）エコノミー
   - [x] キュレーターランク（先見性スコア。詳細は上記節）
   - [ ] 招待リクエスト機能
-  - [ ] 創設アーティスト制度（バッジ・重み+0.2）
+  - [x] 創設アーティスト制度（バッジのみ実装。分配重み+0.2は未実装・詳細は下記節）
   - [x] 人力審査ダッシュボード（詳細は上記節）
   - [ ] 多通貨対応（DBは最初からcurrency付き）
 

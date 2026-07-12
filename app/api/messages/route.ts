@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('direct_messages')
-    .select('id, sender_id, recipient_id, body, read_at, created_at')
+    .select('id, sender_id, recipient_id, body, track_id, read_at, created_at, tracks ( id, title, artists ( id, name ) )')
     .or(
       `and(sender_id.eq.${user.id},recipient_id.eq.${withUserId}),and(sender_id.eq.${withUserId},recipient_id.eq.${user.id})`
     )
@@ -46,11 +46,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { recipient_id, body } = await req.json()
-  if (!recipient_id || typeof body !== 'string' || !body.trim()) {
-    return NextResponse.json({ error: 'recipient_id と body は必須です' }, { status: 400 })
+  const { recipient_id, body, track_id } = await req.json()
+  const trimmedBody = typeof body === 'string' ? body.trim() : ''
+  if (!recipient_id || (!trimmedBody && !track_id)) {
+    return NextResponse.json({ error: 'recipient_id と本文または楽曲の添付が必要です' }, { status: 400 })
   }
-  if (body.length > 1000) {
+  if (trimmedBody.length > 1000) {
     return NextResponse.json({ error: 'メッセージは1000文字以内です' }, { status: 400 })
   }
   if (recipient_id === user.id) {
@@ -63,8 +64,8 @@ export async function POST(req: NextRequest) {
 
   const { data: message, error } = await supabase
     .from('direct_messages')
-    .insert({ sender_id: user.id, recipient_id, body: body.trim() })
-    .select('id, sender_id, recipient_id, body, read_at, created_at')
+    .insert({ sender_id: user.id, recipient_id, body: trimmedBody, track_id: track_id ?? null })
+    .select('id, sender_id, recipient_id, body, track_id, read_at, created_at, tracks ( id, title, artists ( id, name ) )')
     .single()
 
   if (error) {

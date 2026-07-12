@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const { data: artist } = await supabase
     .from('artists')
-    .select('id, name, review_status')
+    .select('id, name, review_status, founding_artist')
     .eq('user_id', user.id)
     .single()
 

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       id, body, visibility, created_at, track_id, genre_id,
       author_user_id, author_artist_id,
       tracks ( id, title ),
-      artists:author_artist_id ( id, name )
+      artists:author_artist_id ( id, name, founding_artist )
     `)
     .eq('status', 'active')
     .eq('visibility', 'public')
