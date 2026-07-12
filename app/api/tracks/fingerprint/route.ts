@@ -5,9 +5,11 @@ import { NextRequest, NextResponse } from 'next/server'
 /**
  * POST /api/tracks/fingerprint
  *
- * クライアント（fpcalc / Chromaprint WASM）からフィンガープリントを受け取り：
- * 1. DB内重複チェック
- * 2. AcoustID API で既存楽曲照合
+ * クライアント（lib/audio/client-fingerprint.ts の簡易フィンガープリント。
+ * 真のChromaprint WASMではない）からフィンガープリントを受け取り：
+ * 1. DB内重複チェック（RESON内の完全一致・ほぼ一致を検知。主目的）
+ * 2. AcoustID API で既存楽曲照合（簡易フィンガープリントのため実質常に不一致になる。
+ *    将来Chromaprint WASMを統合すればここが機能するようになる）
  * 3. tracks.fingerprint を保存
  *
  * 重複検出時は 409 を返す（UI でアーティストに通知）

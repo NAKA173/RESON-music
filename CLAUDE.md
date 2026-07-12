@@ -518,6 +518,36 @@ tracks.isrc text（nullable）。DB側でも形式チェック制約 + NULLを�
 
 ---
 
+## 重複検知（フィンガープリント）— β版緊急対応で実装
+
+```
+発覚した問題：lib/audio/fingerprint.ts（サーバー側のAcoustID照合・DB内重複チェック）は
+  完成していたが、クライアント側でフィンガープリントを生成・送信する処理が
+  「fpcalc WASMは別途統合」というコメントのまま放置されており、実際には一度も
+  呼び出されていなかった（重複楽曲がノーチェックで配信されてしまう状態）。
+
+対応（簡易実装。真のChromaprint互換ではないことを明記）：
+  lib/audio/client-fingerprint.ts の computeClientFingerprint(file) - ブラウザの
+    Web Audio API（decodeAudioData）で音声をデコードし、ラウドネス（RMS）の
+    エンベロープを512点抽出→最大値で正規化・量子化→SHA-256でハッシュ化した文字列を
+    返す。ChromaprintのようなAcoustID互換のクロマ特徴量ではないため、AcoustID側の
+    外部データベース（MusicBrainz）とのマッチングは機能しない
+    （lib/audio/fingerprint.ts の lookupFingerprint は呼ばれるがほぼ常に不一致になる）。
+    目的はRESON内の完全一致・ほぼ一致の重複アップロードを検知することに限定する。
+  デコードに失敗した場合は null を返し、フィンガープリント生成をスキップする
+    （重複検知が効かなくなるだけで、アップロード自体は継続させる・安全側に倒す）。
+
+app/(artist)/upload/page.tsx：アップロード完了後にフィンガープリントを計算し
+  POST /api/tracks/fingerprint に送信する。409（重複）が返った場合は警告バナーを表示し、
+  ダッシュボードへの遷移を4秒遅らせて警告を読めるようにする（審査時に人力で確認する
+  想定・自動でのアップロード拒否は行わない）。
+
+将来的にChromaprint WASMを統合すれば、この層を差し替えるだけでAcoustID外部照合
+  （MusicBrainzのメタデータ取得）も機能するようになる設計にしている。
+```
+
+---
+
 ## 楽曲登録審査（配信代行サービスのフローを参考に追加。訂正: 「登録のプロセスを
 配信代行サービスに近づける」という指示は、アーティスト登録ではなくこの楽曲登録の
 フローを指していた）
@@ -944,14 +974,17 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
   - [x] 熱量スコア月次バッチ
   - [x] 分配プール計算・artist_balances更新
   - [x] アーティスト月次レポート（計算式付き）
-  - [x] AcoustID重複検知
+  - [x] AcoustID重複検知（簡易フィンガープリント。詳細は下記「重複検知（フィンガープリント）」節）
   - [x] AI生成タグ強制付与フロー
   - [x] Support+月間蓄積投げ銭精算
   - [x] PaymentProvider抽象化レイヤー（Stripeアダプターのみ実装。他社決済は未実装・v3.4第3章）
 
 - [ ] **Phase 2**（4〜6ヶ月）発見性
-  - [ ] 文脈検索（Claude Haiku + pgvector）
-  - [ ] Redisキャッシュ（LLMクエリ）
+  - [ ] 文脈検索（Claude Haiku + pgvector）。app/(player)/search は「準備中」の
+        プレースホルダー表示のみ実装済み（ナビのリンク先が空で404/白画面になる問題への対応）
+  - [x] Redisキャッシュの基盤（lib/cache.ts）を先行実装。文脈検索が未実装のため
+        まだどこからも呼ばれていない（UPSTASH_REDIS_URL/TOKEN未設定時は常にミスとして
+        動作する no-op 設計。文脈検索実装時に withCache() でラップする想定）
   - [x] 探索モード（再生数100〜5,000限定推薦）
   - [x] 熱量スコアベース推薦
   - [x] Support Graph（応援の連鎖表示。フォロー中ユーザーの応援を表示・詳細は上記節）

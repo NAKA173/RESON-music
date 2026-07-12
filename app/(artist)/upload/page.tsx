@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { computeClientFingerprint } from '@/lib/audio/client-fingerprint'
 
 const ALLOWED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/flac', 'audio/wav', 'audio/ogg']
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -32,6 +33,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
   const [aiWarning, setAiWarning] = useState('')
+  const [duplicateWarning, setDuplicateWarning] = useState('')
   const [genres, setGenres] = useState<Genre[]>([])
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
@@ -244,21 +246,39 @@ export default function UploadPage() {
     }
 
     setProgress(80)
+    setStatusMsg('重複楽曲を確認中…')
 
-    // Step 4: フィンガープリント送信（ブラウザ側で生成できる場合のみ）
-    // fpcalc WASM は別途統合。現時点ではスキップしてサーバー側は受け入れ準備済み。
-    // フィンガープリントが取得できた場合は以下を呼び出す：
-    // await fetch('/api/tracks/fingerprint', { method: 'POST', ... })
+    // Step 4: フィンガープリント生成・送信（重複検知）
+    // 簡易実装（真のChromaprint互換ではない・詳細はlib/audio/client-fingerprint.tsを参照）
+    let duplicateDetected = false
+    const fingerprint = await computeClientFingerprint(file)
+    if (fingerprint) {
+      const fpRes = await fetch('/api/tracks/fingerprint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ track_id: meta.track_id, fingerprint, duration_sec }),
+      })
+      if (fpRes.status === 409) {
+        const fpData = await fpRes.json()
+        duplicateDetected = true
+        setDuplicateWarning(
+          `この楽曲は既存の楽曲と非常に似ています（重複の可能性）。審査時に確認されます。track_id: ${fpData.existing_track_id ?? '不明'}`
+        )
+      }
+    }
 
     setProgress(100)
     setStatusMsg('')
     setLoading(false)
 
-    if (!aiData.ai_generated || aiData.reason === 'self_declared') {
+    if (duplicateDetected) {
+      // 重複の可能性がある場合は警告を読んでもらうため遷移を遅らせる
+      setTimeout(() => router.push('/dashboard'), 4000)
+    } else if (!aiData.ai_generated || aiData.reason === 'self_declared') {
       router.push('/dashboard')
     }
     // AI検出された場合は確認ダイアログを表示してから遷移
-    if (aiData.ai_generated && aiData.reason === 'metadata_pattern') {
+    if (!duplicateDetected && aiData.ai_generated && aiData.reason === 'metadata_pattern') {
       setTimeout(() => router.push('/dashboard'), 3000)
     }
   }
@@ -283,6 +303,12 @@ export default function UploadPage() {
         {aiWarning && (
           <p className="text-sm text-yellow-400 bg-yellow-900/20 border border-yellow-800 rounded-lg px-4 py-3">
             ⚠️ {aiWarning}
+          </p>
+        )}
+
+        {duplicateWarning && (
+          <p className="text-sm text-orange-400 bg-orange-900/20 border border-orange-800 rounded-lg px-4 py-3">
+            ⚠️ {duplicateWarning}
           </p>
         )}
 
