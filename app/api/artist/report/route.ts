@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       .single(),
     supabase
       .from('tracks')
-      .select('id, title, cumulative_plays, in_distribution, ai_generated, review_status')
+      .select('id, title, cumulative_plays, in_distribution, ai_generated, review_status, isrc')
       .eq('artist_id', artist.id)
       .order('cumulative_plays', { ascending: false }),
   ])

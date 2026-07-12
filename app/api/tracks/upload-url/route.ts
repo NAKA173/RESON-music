@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { buildR2Key, getUploadUrl, getAudioExt } from '@/lib/audio'
+import { normalizeIsrc, isValidIsrc } from '@/lib/isrc'
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { content_type, title, duration_sec, ai_generated, genre_ids, album_id, track_number } = await req.json()
+  const { content_type, title, duration_sec, ai_generated, genre_ids, album_id, track_number, isrc } = await req.json()
 
   const ext = getAudioExt(content_type)
   if (!ext) {
@@ -21,6 +22,19 @@ export async function POST(req: NextRequest) {
   }
   if (!duration_sec || duration_sec < 1 || duration_sec > 7200) {
     return NextResponse.json({ error: '楽曲の長さが不正です' }, { status: 400 })
+  }
+
+  let normalizedIsrc: string | null = null
+  if (isrc && typeof isrc === 'string' && isrc.trim()) {
+    normalizedIsrc = normalizeIsrc(isrc)
+    if (!isValidIsrc(normalizedIsrc)) {
+      return NextResponse.json({ error: 'ISRCの形式が不正です（例: US-RC1-76-07839）' }, { status: 400 })
+    }
+    const { data: existingIsrc } = await supabase
+      .from('tracks').select('id').eq('isrc', normalizedIsrc).maybeSingle()
+    if (existingIsrc) {
+      return NextResponse.json({ error: 'このISRCは既に別の楽曲で使用されています' }, { status: 409 })
+    }
   }
 
   const { data: artist } = await supabase
@@ -54,6 +68,7 @@ export async function POST(req: NextRequest) {
     ai_generated: ai_generated ?? false,
     album_id: album_id ?? null,
     track_number: album_id ? (track_number ?? null) : null,
+    isrc: normalizedIsrc,
   })
 
   if (insertError) {

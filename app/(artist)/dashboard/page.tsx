@@ -21,6 +21,7 @@ interface Track {
   in_distribution: boolean
   ai_generated: boolean
   review_status: 'pending' | 'approved' | 'rejected'
+  isrc: string | null
 }
 
 interface ReportData {
@@ -65,6 +66,10 @@ export default function DashboardPage() {
   const [lyricsEditingId, setLyricsEditingId] = useState<string | null>(null)
   const [lyricsDraft, setLyricsDraft] = useState('')
   const [lyricsSaving, setLyricsSaving] = useState(false)
+  const [isrcEditingId, setIsrcEditingId] = useState<string | null>(null)
+  const [isrcDraft, setIsrcDraft] = useState('')
+  const [isrcSaving, setIsrcSaving] = useState(false)
+  const [isrcError, setIsrcError] = useState('')
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [editingBank, setEditingBank] = useState(false)
   const [bankForm, setBankForm] = useState<BankAccount>({
@@ -127,6 +132,31 @@ export default function DashboardPage() {
     })
     setLyricsSaving(false)
     setLyricsEditingId(null)
+  }
+
+  function toggleIsrcEditor(trackId: string, currentIsrc: string | null) {
+    setIsrcError('')
+    if (isrcEditingId === trackId) {
+      setIsrcEditingId(null)
+      return
+    }
+    setIsrcEditingId(trackId)
+    setIsrcDraft(currentIsrc ?? '')
+  }
+
+  async function saveIsrc(trackId: string) {
+    setIsrcSaving(true)
+    setIsrcError('')
+    const res = await fetch(`/api/tracks/${trackId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isrc: isrcDraft }),
+    })
+    const body = await res.json()
+    setIsrcSaving(false)
+    if (!res.ok) { setIsrcError(body.error); return }
+    setIsrcEditingId(null)
+    fetch('/api/artist/report').then((r) => r.json()).then((d) => setData(d))
   }
 
   async function requestPayout() {
@@ -330,8 +360,17 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
+                    <p className="text-xs text-zinc-600 mt-0.5">
+                      ISRC: {t.isrc ?? '未登録'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => toggleIsrcEditor(t.id, t.isrc)}
+                      className="text-xs text-zinc-500 hover:text-white underline"
+                    >
+                      ISRC
+                    </button>
                     <button
                       onClick={() => toggleLyricsEditor(t.id)}
                       className="text-xs text-zinc-500 hover:text-white underline"
@@ -343,6 +382,34 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
+                {isrcEditingId === t.id && (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={isrcDraft}
+                      onChange={(e) => setIsrcDraft(e.target.value)}
+                      placeholder="例: US-RC1-76-07839"
+                      maxLength={15}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                    />
+                    {isrcError && <p className="text-xs text-red-400">{isrcError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveIsrc(t.id)}
+                        disabled={isrcSaving}
+                        className="text-xs rounded-lg bg-white text-black px-3 py-1.5 font-semibold disabled:opacity-40"
+                      >
+                        {isrcSaving ? '保存中…' : '保存する'}
+                      </button>
+                      <button
+                        onClick={() => setIsrcEditingId(null)}
+                        className="text-xs rounded-lg border border-zinc-700 px-3 py-1.5"
+                      >
+                        閉じる
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {lyricsEditingId === t.id && (
                   <div className="space-y-2">
                     <textarea

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { normalizeIsrc, isValidIsrc } from '@/lib/isrc'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ trackId: string }> }) {
@@ -43,11 +44,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ tr
     update.lyrics = typeof body.lyrics === 'string' ? body.lyrics : null
   }
 
+  if ('isrc' in body) {
+    if (typeof body.isrc === 'string' && body.isrc.trim()) {
+      const normalized = normalizeIsrc(body.isrc)
+      if (!isValidIsrc(normalized)) {
+        return NextResponse.json({ error: 'ISRCの形式が不正です（例: US-RC1-76-07839）' }, { status: 400 })
+      }
+      const { data: existingIsrc } = await supabase
+        .from('tracks').select('id').eq('isrc', normalized).neq('id', trackId).maybeSingle()
+      if (existingIsrc) {
+        return NextResponse.json({ error: 'このISRCは既に別の楽曲で使用されています' }, { status: 409 })
+      }
+      update.isrc = normalized
+    } else {
+      update.isrc = null
+    }
+  }
+
   const { data: updated, error } = await supabase
     .from('tracks')
     .update(update)
     .eq('id', trackId)
-    .select('id, title, album_id, track_number, lyrics')
+    .select('id, title, album_id, track_number, lyrics, isrc')
     .single()
 
   if (error) {

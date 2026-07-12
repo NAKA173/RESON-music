@@ -98,6 +98,7 @@ tracks (
   r2_key text,             -- Cloudflare R2のオブジェクトキー
   cover_r2_key text,       -- ジャケット画像（任意）
   fingerprint text,        -- AcoustID
+  isrc text,               -- 国際標準レコーディングコード（任意・自己申告制）
   ai_generated bool DEFAULT false,
   cumulative_plays int DEFAULT 0,
   in_distribution bool DEFAULT false,  -- 100再生超えたらtrue
@@ -489,6 +490,30 @@ RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作
 
 ダッシュボード（app/(artist)/dashboard/page.tsx）：review_status が pending/rejected の場合に
   バナー表示。アルバム一覧も追加表示（/api/albums?mine=true）。
+```
+
+---
+
+## ISRC（国際標準レコーディングコード）
+
+```
+配信代行サービス（TuneCore Japan等）と同様、ISRCは自己申告制の任意項目として導入。
+RESON側でISRC発行機関に登録して新規コードを発行する機能は持たない（登録者コードの
+取得には各国のISRC発行機関への申請が必要で本サービスの範囲外）。既にISRCを取得済みの
+アーティストが入力できる、という位置づけ。
+
+lib/isrc.ts:
+  normalizeIsrc(input) - ハイフン・空白を除去し大文字化した正規形（12文字）に変換
+  isValidIsrc(normalized) - CC-XXX-YY-NNNNN形式かを判定する純粋関数（テスト済み）
+  formatIsrc(normalized) - 表示用にハイフン区切りへ整形
+
+tracks.isrc text（nullable）。DB側でも形式チェック制約 + NULLを除く一意インデックス
+  （idx_tracks_isrc_unique）を設定し、アプリ層のバリデーションと二重に保証する。
+  重複時は409を返す（fingerprint/AcoustIDの重複検知と同じ「未入力可・重複のみ検知」方針）。
+
+入力: app/(artist)/upload（新規アップロード時・任意）
+     app/api/tracks/[trackId]（PATCH { isrc }・本人のみ・後からの追加/修正も可能）
+表示: app/(artist)/dashboard の楽曲リストに表示（本人のみ。公開ページには未反映）
 ```
 
 ---

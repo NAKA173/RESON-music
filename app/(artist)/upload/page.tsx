@@ -45,6 +45,7 @@ export default function UploadPage() {
   const [albumCoverUploading, setAlbumCoverUploading] = useState(false)
   const [albumCoverDone, setAlbumCoverDone] = useState(false)
   const albumCoverInputRef = useRef<HTMLInputElement>(null)
+  const [isrc, setIsrc] = useState('')
 
   useEffect(() => {
     fetch('/api/genres')
@@ -183,6 +184,7 @@ export default function UploadPage() {
         genre_ids: selectedGenreIds,
         album_id: albumId || undefined,
         track_number: albumId && trackNumber ? Number(trackNumber) : undefined,
+        isrc: isrc || undefined,
       }),
     })
     const meta = await metaRes.json()
@@ -323,6 +325,22 @@ export default function UploadPage() {
               required
               className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
             />
+          </div>
+
+          {/* ISRC */}
+          <div>
+            <label className="block text-sm text-zinc-400 mb-1">ISRC（任意）</label>
+            <input
+              type="text"
+              value={isrc}
+              onChange={(e) => setIsrc(e.target.value)}
+              placeholder="例: US-RC1-76-07839"
+              maxLength={15}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+            />
+            <p className="mt-1 text-xs text-zinc-600">
+              既に取得済みのISRCがある場合のみ入力してください。未取得の場合は空欄でかまいません。
+            </p>
           </div>
 
           {/* ジャンルタグ（最大{MAX_GENRES}個） */}
