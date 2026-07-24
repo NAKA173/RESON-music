@@ -494,6 +494,34 @@ RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作
 
 ---
 
+## 開発者用ログイン（電話番号SMS認証のバイパス・開発/検証専用）
+
+```
+発覚した問題：SupabaseのSMSプロバイダ（Twilio等）が未設定/不調な環境では、
+  電話番号OTP認証フロー自体が機能せず登録・ログインができない。よくある原因：
+    - SupabaseダッシュボードでSMSプロバイダ（Twilio/MessageBird等）が未設定
+    - Twilioトライアルアカウントで未検証の番号に送信しようとしている
+    - 電話番号の形式が国際番号形式（+81...）になっていない
+    - Supabase Authの電話認証機能自体がプロジェクトで無効化されている
+  上記はSupabaseダッシュボード側の設定確認が必要（コード側の問題ではない）。
+
+緊急避難として、電話番号を使わないメール+パスワードでの開発者用ログインを追加：
+  app/api/dev/seed-account（POST・CRON_SECRET認証）
+    { email, password } を受け取り、Supabase Auth ユーザーを
+    auth.admin.createUser()（email_confirm: true）で作成（べき等・既存なら
+    パスワードを更新）。あわせて users（plan='support_plus', is_admin=true）・
+    artists（review_status='approved'）・artist_bank_accountsをダミー値で作成し、
+    プレミアム機能・アーティスト機能・管理ダッシュボードをすぐ試せる状態にする。
+  app/(auth)/dev-login/page.tsx（GET）
+    lib/supabase/client.ts のブラウザクライアントで signInWithPassword() を実行する
+    シンプルなログインフォーム。
+
+本番運用では使わない想定（CRON_SECRETを知らない限り誰も新規作成できないため実害は
+  限定的だが、電話番号認証が正常に動く環境では不要な迂回路であることに留意）。
+```
+
+---
+
 ## ISRC（国際標準レコーディングコード）
 
 ```
