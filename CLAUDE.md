@@ -513,13 +513,14 @@ RESON実装（既存のメール認証フローに2ステップ追加。管理UI
     Supabaseプロジェクト設定でメール確認（Confirm email）が有効な場合はsession が
     null で返るため、needs_email_confirmation: true をクライアントへ返し、
     「確認メールを送信しました」画面（登録フローのstep='confirm-email'）を表示する。
-    確認済み（無効化設定時）はsessionが即時発行されるため次のstep='artist'へ進む。
+    確認済み（無効化設定時）はsessionが即時発行されるため次のstep（role選択）へ進む。
   ログイン：app/(auth)/login/page.tsx（クライアント側で直接）
     supabase.auth.signInWithPassword({ email, password })。専用APIルートは持たず
     ブラウザのSupabaseクライアントを直接使用する（後述の開発者用ログインと同方式）。
   登録フロー（app/(auth)/register/page.tsx）：
-    account（メール+パスワード+確認） → [confirm-email（メール確認待ち・条件付き）]
-    → artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認）→ done
+    account（メール+パスワード+確認） → role（リスナー/アーティスト選択） →
+    [confirm-email（メール確認待ち・条件付き）] → リスナーは/homeへ、アーティストは
+    artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認）→ done
 
 パスワードの再設定：
   app/(auth)/reset-password/page.tsx
@@ -539,6 +540,53 @@ RESON実装（既存のメール認証フローに2ステップ追加。管理UI
   本番導入前に確認すべき事項）。
 
 旧実装（メールOTP・app/api/auth/send-otp・verify-otp）は本切替に伴い削除済み。
+```
+
+---
+
+## リスナー専用アカウント導線
+
+```
+発覚した問題：登録フローがアーティスト登録の一本道になっており、ログイン後は常に
+  /dashboard（app/(artist)/dashboard）へ遷移していた。リスナーとしてだけ使いたい
+  ユーザーがログインすると「アーティスト登録が必要です」という行き止まり画面に
+  なっていた（app/(player)/home 等のリスナー向け画面自体は実装済みだが、そこへの
+  導線が存在しなかった）。
+
+アカウント種別の判定：
+  同一アカウントがリスナー/アーティストの両方を兼ねられる想定（別アカウント運用は
+  しない）。判定はartistsテーブルに対象ユーザー（user_id）のレコードがあるかどうか
+  のみを見る。専用のroleカラムやis_artistフラグは追加していない
+  （既存のapp/api/artist/reportが403で返す判定と同じ考え方）。
+  app/api/artist/status（GET・本人のみ）: { has_artist: boolean } を返す軽量エンドポイント。
+
+ログイン後の分岐（app/(auth)/login/page.tsx）：
+  signInWithPassword成功後に/api/artist/statusを呼び、has_artist=trueなら/dashboard、
+  falseなら/homeへ遷移する。
+
+登録フローの分岐（app/(auth)/register/page.tsx）：
+  account（メール+パスワード） → role（「リスナーとして始める」/「アーティストとして
+  始める」の選択）→ [confirm-email] → リスナーは/homeへ直接、アーティストは既存の
+  artist/bank/rights/doneステップへ進む。StepIndicatorはアーティストを選んだ場合のみ表示。
+
+既存リスナーの後からのアーティスト登録：
+  app/(artist)/register-artist/page.tsx（新規）
+    ログイン済みユーザー向けの単独ページ。register/page.tsxのartist/bank/rights
+    ステップと同じ入力項目・同じAPI（/api/auth/register-artist）を使う
+    （メール+パスワードの作成は不要なため、それだけを除いた複製）。
+  app/(player)/home/page.tsx: /api/artist/statusでhas_artist=falseの場合のみ
+    トップバーの「+ アップロード」リンクを「アーティストとして登録する」
+    （/register-artist へのリンク）に置き換える。
+
+「アーティスト登録が必要です」画面（app/(artist)/dashboard/page.tsx）は変更なし。
+  リスナーが/dashboardに直接アクセスした場合の救済導線（/register への案内）として
+  そのまま残している。
+
+middleware.tsは変更不要の判断だったが、レビュー中に無関係な既存バグを発見し合わせて
+  修正した：PUBLIC_PATHSに/reset-password・/dev-loginが含まれておらず、未ログイン状態
+  でこれらのページにアクセスすると/loginへリダイレクトされてしまっていた
+  （パスワード再設定・開発者ログインはどちらも「ログインしていない状態で使う」ための
+  ページのため、認証必須ガードの対象外にする必要がある）。
 ```
 
 ---

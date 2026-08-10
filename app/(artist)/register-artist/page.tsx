@@ -1,19 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Step = 'account' | 'role' | 'confirm-email' | 'artist' | 'bank' | 'rights' | 'done'
-type Role = 'listener' | 'artist'
+type Step = 'artist' | 'bank' | 'rights' | 'done'
 
-export default function RegisterPage() {
+// 既存のリスナーアカウントが後からアーティスト登録するためのフロー。
+// app/(auth)/register のアーティスト向けステップ（artist/bank/rights）と同じ
+// 入力項目・同じAPI（/api/auth/register-artist）を使うが、ログイン済みユーザー
+// 向けの単独ページとして提供する（メール+パスワードの作成は不要）。
+export default function RegisterArtistPage() {
   const router = useRouter()
-  const [step, setStep] = useState<Step>('account')
-  const [role, setRole] = useState<Role | null>(null)
-  const [needsConfirmation, setNeedsConfirmation] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [step, setStep] = useState<Step>('artist')
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [bankName, setBankName] = useState('')
@@ -27,50 +25,6 @@ export default function RegisterPage() {
   const [parentConsentContact, setParentConsentContact] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    const ref = new URLSearchParams(window.location.search).get('ref')
-    if (ref) sessionStorage.setItem('reson_ref', ref)
-  }, [])
-
-  async function createAccount(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    if (password.length < 8) {
-      setError('パスワードは8文字以上で入力してください')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('パスワードが一致しません')
-      return
-    }
-    setLoading(true)
-    const ref = sessionStorage.getItem('reson_ref')
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, ref }),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(data.error); return }
-    sessionStorage.removeItem('reson_ref')
-    setNeedsConfirmation(!!data.needs_email_confirmation)
-    setStep('role')
-  }
-
-  function chooseRole(chosen: Role) {
-    setRole(chosen)
-    if (needsConfirmation) {
-      setStep('confirm-email')
-      return
-    }
-    if (chosen === 'listener') {
-      router.push('/home')
-      return
-    }
-    setStep('artist')
-  }
 
   function nextFromArtist(e: React.FormEvent) {
     e.preventDefault()
@@ -126,102 +80,13 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">RESON</h1>
-          <p className="mt-2 text-sm text-zinc-400">新規登録</p>
+          <p className="mt-2 text-sm text-zinc-400">アーティスト登録</p>
         </div>
-
-        {role === 'artist' && step !== 'done' && step !== 'confirm-email' && step !== 'role' && (
-          <StepIndicator current={step} />
-        )}
 
         {error && (
           <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
             {error}
           </p>
-        )}
-
-        {step === 'account' && (
-          <form onSubmit={createAccount} className="space-y-4">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">パスワード</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
-              />
-              <p className="mt-1 text-xs text-zinc-600">8文字以上</p>
-            </div>
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">パスワード（確認）</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
-            >
-              {loading ? '登録中…' : 'アカウントを作成'}
-            </button>
-          </form>
-        )}
-
-        {step === 'role' && (
-          <div className="space-y-4">
-            <p className="text-sm text-zinc-400 text-center">RESONをどう使いますか？</p>
-            <button
-              type="button"
-              onClick={() => chooseRole('listener')}
-              className="w-full text-left bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-4 hover:border-zinc-400 transition"
-            >
-              <span className="block font-semibold">リスナーとして始める</span>
-              <span className="block text-xs text-zinc-500 mt-1">楽曲を聴いて応援する。あとからいつでもアーティスト登録できます</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => chooseRole('artist')}
-              className="w-full text-left bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-4 hover:border-zinc-400 transition"
-            >
-              <span className="block font-semibold">アーティストとして始める</span>
-              <span className="block text-xs text-zinc-500 mt-1">楽曲をアップロードして配信する（審査・出金先の登録があります）</span>
-            </button>
-          </div>
-        )}
-
-        {step === 'confirm-email' && (
-          <div className="text-center space-y-4">
-            <p className="text-4xl">📩</p>
-            <h2 className="text-lg font-bold">確認メールを送信しました</h2>
-            <p className="text-sm text-zinc-400">
-              {email} に届いた確認リンクをクリックしてください。確認後、ログインしてください。
-              {role === 'artist' && '（ログイン後、ホーム画面から「アーティストとして登録する」を選んでアーティスト登録を続けられます）'}
-            </p>
-            <button
-              onClick={() => router.push('/login')}
-              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
-            >
-              ログインへ
-            </button>
-          </div>
         )}
 
         {step === 'artist' && (
@@ -416,33 +281,5 @@ export default function RegisterPage() {
         )}
       </div>
     </main>
-  )
-}
-
-function StepIndicator({ current }: { current: Exclude<Step, 'done' | 'confirm-email' | 'role'> }) {
-  const steps: { key: Exclude<Step, 'done' | 'confirm-email' | 'role'>; label: string }[] = [
-    { key: 'account', label: 'アカウント' },
-    { key: 'artist', label: 'プロフィール' },
-    { key: 'bank', label: '出金先' },
-    { key: 'rights', label: '権利確認' },
-  ]
-  const idx = steps.findIndex((s) => s.key === current)
-
-  return (
-    <div className="flex items-center justify-center gap-1.5">
-      {steps.map((s, i) => (
-        <div key={s.key} className="flex items-center gap-1.5">
-          <div className={`flex items-center gap-1 ${i <= idx ? 'text-white' : 'text-zinc-600'}`}>
-            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < idx ? 'bg-white text-black' : i === idx ? 'border-2 border-white' : 'border border-zinc-700'}`}>
-              {i < idx ? '✓' : i + 1}
-            </span>
-            <span className="text-xs hidden sm:inline">{s.label}</span>
-          </div>
-          {i < steps.length - 1 && (
-            <div className={`w-4 h-px ${i < idx ? 'bg-white' : 'bg-zinc-700'}`} />
-          )}
-        </div>
-      ))}
-    </div>
   )
 }

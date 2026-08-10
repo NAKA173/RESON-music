@@ -23,9 +23,15 @@ export default function LoginPage() {
     setLoading(true)
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) { setLoading(false); setError(error.message); return }
+
+    // アーティスト登録済みか判定してリダイレクト先を分岐する
+    // （同一アカウントがリスナー/アーティストの両方を兼ねられる想定のため、
+    // artistsレコードの有無だけを見る。判定に失敗した場合はリスナー扱いで/homeへ）
+    const statusRes = await fetch('/api/artist/status')
     setLoading(false)
-    if (error) { setError(error.message); return }
-    router.push('/dashboard')
+    const statusData = statusRes.ok ? await statusRes.json() : { has_artist: false }
+    router.push(statusData.has_artist ? '/dashboard' : '/home')
   }
 
   return (

@@ -62,6 +62,7 @@ export default function PlayerPage() {
   const [forYouTracks, setForYouTracks] = useState<ForYouTrack[]>([])
   const [exploreTracks, setExploreTracks] = useState<ExploreTrack[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasArtist, setHasArtist] = useState(true)
   const queue = usePlayerQueue(tracks)
 
   useEffect(() => {
@@ -80,6 +81,10 @@ export default function PlayerPage() {
     fetch('/api/explore')
       .then((r) => r.json())
       .then((d) => setExploreTracks((d.tracks ?? []).slice(0, 3)))
+    // アーティスト未登録の場合のみ「アーティストとして登録する」導線を表示する
+    fetch('/api/artist/status')
+      .then((r) => (r.ok ? r.json() : { has_artist: true }))
+      .then((d) => setHasArtist(!!d.has_artist))
   }, [])
 
   const current = queue.current
@@ -158,9 +163,15 @@ export default function PlayerPage() {
             <Link href="/pricing" className="text-sm text-[var(--dim)] hover:text-[var(--text)]">
               料金
             </Link>
-            <Link href="/upload" className="text-sm text-[var(--dim)] hover:text-[var(--text)]">
-              + アップロード
-            </Link>
+            {hasArtist ? (
+              <Link href="/upload" className="text-sm text-[var(--dim)] hover:text-[var(--text)]">
+                + アップロード
+              </Link>
+            ) : (
+              <Link href="/register-artist" className="text-sm text-[var(--dim)] hover:text-[var(--text)]">
+                アーティストとして登録する
+              </Link>
+            )}
             <ThemeToggle />
           </div>
 
