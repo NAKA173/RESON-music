@@ -2,17 +2,17 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
-  const { phone, token, ref } = await req.json()
+  const { email, token, ref } = await req.json()
 
-  if (!phone || !token) {
-    return NextResponse.json({ error: 'phone と token は必須です' }, { status: 400 })
+  if (!email || !token) {
+    return NextResponse.json({ error: 'email と token は必須です' }, { status: 400 })
   }
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.verifyOtp({
-    phone,
+    email,
     token,
-    type: 'sms',
+    type: 'email',
   })
 
   if (error) {

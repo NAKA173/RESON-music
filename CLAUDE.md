@@ -456,7 +456,7 @@ Support+: 1,000円  高音質・応援ボーナス
 ## アーティスト登録・出金先銀行口座（Phase 0拡張）
 
 ```
-RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作らずCRON_SECRET運用で統一）：
+RESON実装（既存のメール認証フローに2ステップ追加。管理UIは作らずCRON_SECRET運用で統一）：
   artists.review_status text ('pending' | 'approved' | 'rejected') DEFAULT 'pending'
     アーティストアカウント自体の審査（本人確認相当。楽曲ごとの配信審査とは別物。
     楽曲単位の審査は下記「楽曲登録審査」節を参照）。
@@ -481,7 +481,7 @@ RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作
   だが、現時点では未実装・調査もしていない。
 
 登録フロー（app/(auth)/register/page.tsx）：
-  phone → otp → artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認・同意必須）→ done
+  email → otp → artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認・同意必須）→ done
   審査が承認されるまでアップロード自体は可能（配信開始＝公開のゲートではなく、登録ステータス
   の可視化のみ・実際の配信停止ロジックは未実装。Phase 4の人力審査ダッシュボードで本格運用予定）。
 
@@ -494,18 +494,40 @@ RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作
 
 ---
 
-## 開発者用ログイン（電話番号SMS認証のバイパス・開発/検証専用）
+## ログイン方式：電話番号SMS認証 → メールアドレス認証への切替（学生のSMSコスト対策）
 
 ```
-発覚した問題：SupabaseのSMSプロバイダ（Twilio等）が未設定/不調な環境では、
-  電話番号OTP認証フロー自体が機能せず登録・ログインができない。よくある原因：
-    - SupabaseダッシュボードでSMSプロバイダ（Twilio/MessageBird等）が未設定
-    - Twilioトライアルアカウントで未検証の番号に送信しようとしている
-    - 電話番号の形式が国際番号形式（+81...）になっていない
-    - Supabase Authの電話認証機能自体がプロジェクトで無効化されている
-  上記はSupabaseダッシュボード側の設定確認が必要（コード側の問題ではない）。
+変更理由：SMS OTP（Twilio等）は1通あたりの送信コストが発生し、無料のStudentプラン
+  ユーザー（.ed.jp認証と合わせて2重にコストがかかる構成だった）を含む全ユーザーに
+  課すには開始時点でコストが重い。Supabase Auth自体がメールOTPをネイティブサポート
+  しているため、送信コストのかからないメール認証を登録・ログインの標準フローに変更。
 
-緊急避難として、電話番号を使わないメール+パスワードでの開発者用ログインを追加：
+実装（app/api/auth/send-otp・app/api/auth/verify-otp・app/(auth)/register・
+  app/(auth)/login）：
+  send-otp: supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })
+  verify-otp: supabase.auth.verifyOtp({ email, token, type: 'email' })
+  電話番号入力欄はすべてメールアドレス入力欄に置き換え（UIの6桁コード方式のUXは維持）。
+  既存のusers upsert・紹介コード記録ロジックはphone/emailの違いに依存しないため変更なし。
+
+注意：メール送信自体はSupabase Auth組み込みのメール配信機能を使用する（Resend経由の
+  lib/email.tsとは別経路。Studentプラン認証・保護者同意通知等は引き続きlib/email.ts/
+  Resendを使用）。SupabaseプロジェクトのAuth設定でメール送信レート制限・SMTP設定
+  （本番では独自SMTP推奨、デフォルトのSupabase送信は低レート制限）の確認が必要
+  （ダッシュボード側の設定・本番導入前に確認すべき事項）。
+
+将来、電話番号認証を併用する場合はsend-otp/verify-otpにチャネル切替パラメータを
+  追加する想定だが、現時点ではメール認証のみに一本化している。
+```
+
+---
+
+## 開発者用ログイン（メール+パスワードのバイパス・開発/検証専用）
+
+```
+上記のメール認証切替により電話番号OTP起因の詰まりは解消したが、開発/検証時に
+Supabase Auth設定（メールレート制限等）の影響を受けずに即時ログインできる手段
+として、既存のバイパス経路をメール認証切替後も残している：
+
   app/api/dev/seed-account（POST・CRON_SECRET認証）
     { email, password } を受け取り、Supabase Auth ユーザーを
     auth.admin.createUser()（email_confirm: true）で作成（べき等・既存なら
@@ -517,7 +539,7 @@ RESON実装（既存のSMS認証フローに2ステップ追加。管理UIは作
     シンプルなログインフォーム。
 
 本番運用では使わない想定（CRON_SECRETを知らない限り誰も新規作成できないため実害は
-  限定的だが、電話番号認証が正常に動く環境では不要な迂回路であることに留意）。
+  限定的）。
 ```
 
 ---
@@ -805,7 +827,7 @@ UI: app/(player)/curators/page.tsx（ランキング一覧）
 バッチAPIは自動化用として並存させる）。
 
 users.is_admin bool DEFAULT false を新設。管理者ロールの判定はこのフラグのみで、
-別途の管理者専用ログインフローは作らず、既存のSupabase Auth（電話番号OTP）で
+別途の管理者専用ログインフローは作らず、既存のSupabase Auth（メールOTP）で
 ログイン済みのユーザーがis_admin=trueであればダッシュボードを利用できる。
 is_adminをtrueにする操作自体はDB直接操作のみ（UIからの権限昇格経路は存在しない）。
 
@@ -958,7 +980,7 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
 ```
 /
 ├── app/
-│   ├── (auth)/              # ログイン・登録・SMS認証
+│   ├── (auth)/              # ログイン・登録・メール認証
 │   ├── (player)/            # リスナー向けUI
 │   │   ├── search/          # 文脈検索
 │   │   └── explore/         # 探索モード
@@ -991,7 +1013,7 @@ app/(artist)/report/page.tsx：/api/artist/report を再利用し、月選択タ
 
 - [x] **Phase 0**（1〜2ヶ月）基盤
   - [x] Supabase環境構築・スキーマ適用
-  - [x] アーティスト登録フロー（SMS認証）
+  - [x] アーティスト登録フロー（メール認証。当初SMS認証だったが学生のコスト対策で切替済み）
   - [x] 楽曲アップロード → R2保存 → 再生（Range Request対応）
   - [x] 基本プレイヤーUI
   - [x] Standard月額決済（PAY.JP or Stripe）

@@ -6,8 +6,8 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [step, setStep] = useState<'phone' | 'otp'>('phone')
-  const [phone, setPhone] = useState('')
+  const [step, setStep] = useState<'email' | 'otp'>('email')
+  const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -24,7 +24,7 @@ export default function LoginPage() {
     const res = await fetch('/api/auth/send-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone }),
+      body: JSON.stringify({ email }),
     })
     const data = await res.json()
     setLoading(false)
@@ -40,7 +40,7 @@ export default function LoginPage() {
     const res = await fetch('/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, token: otp, ref }),
+      body: JSON.stringify({ email, token: otp, ref }),
     })
     const data = await res.json()
     setLoading(false)
@@ -63,15 +63,15 @@ export default function LoginPage() {
           </p>
         )}
 
-        {step === 'phone' && (
+        {step === 'email' && (
           <form onSubmit={sendOtp} className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">電話番号</label>
+              <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
               <input
-                type="tel"
-                placeholder="+819012345678"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
               />
@@ -81,7 +81,7 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
             >
-              {loading ? '送信中…' : 'SMSを送信'}
+              {loading ? '送信中…' : '認証コードを送信'}
             </button>
           </form>
         )}
@@ -101,7 +101,7 @@ export default function LoginPage() {
                 required
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400 text-center text-2xl tracking-widest"
               />
-              <p className="mt-1 text-xs text-zinc-600">{phone} に送信した6桁のコード</p>
+              <p className="mt-1 text-xs text-zinc-600">{email} に送信した6桁のコード</p>
             </div>
             <button
               type="submit"
@@ -112,10 +112,10 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => setStep('phone')}
+              onClick={() => setStep('email')}
               className="w-full text-sm text-zinc-500 hover:text-zinc-300 transition"
             >
-              電話番号を変更する
+              メールアドレスを変更する
             </button>
           </form>
         )}
