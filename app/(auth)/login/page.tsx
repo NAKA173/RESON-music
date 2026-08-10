@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [step, setStep] = useState<'email' | 'otp'>('email')
   const [email, setEmail] = useState('')
-  const [otp, setOtp] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -17,35 +17,14 @@ export default function LoginPage() {
     if (ref) sessionStorage.setItem('reson_ref', ref)
   }, [])
 
-  async function sendOtp(e: React.FormEvent) {
+  async function login(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    const data = await res.json()
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (!res.ok) { setError(data.error); return }
-    setStep('otp')
-  }
-
-  async function verifyOtp(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    const ref = sessionStorage.getItem('reson_ref')
-    const res = await fetch('/api/auth/verify-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, token: otp, ref }),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(data.error); return }
-    sessionStorage.removeItem('reson_ref')
+    if (error) { setError(error.message); return }
     router.push('/dashboard')
   }
 
@@ -63,62 +42,39 @@ export default function LoginPage() {
           </p>
         )}
 
-        {step === 'email' && (
-          <form onSubmit={sendOtp} className="space-y-4">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
-              <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
-            >
-              {loading ? '送信中…' : '認証コードを送信'}
-            </button>
-          </form>
-        )}
-
-        {step === 'otp' && (
-          <form onSubmit={verifyOtp} className="space-y-4">
-            <div>
-              <label className="block text-sm text-zinc-400 mb-1">認証コード</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="123456"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400 text-center text-2xl tracking-widest"
-              />
-              <p className="mt-1 text-xs text-zinc-600">{email} に送信した6桁のコード</p>
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
-            >
-              {loading ? '確認中…' : 'ログイン'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep('email')}
-              className="w-full text-sm text-zinc-500 hover:text-zinc-300 transition"
-            >
-              メールアドレスを変更する
-            </button>
-          </form>
-        )}
+        <form onSubmit={login} className="space-y-4">
+          <div>
+            <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-zinc-400 mb-1">パスワード</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
+          >
+            {loading ? 'ログイン中…' : 'ログイン'}
+          </button>
+          <Link href="/reset-password" className="block text-center text-sm text-zinc-500 hover:text-zinc-300 transition">
+            パスワードを忘れた場合
+          </Link>
+        </form>
 
         <p className="text-center text-sm text-zinc-500">
           アカウントをお持ちでない方は{' '}

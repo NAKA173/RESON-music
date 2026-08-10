@@ -481,7 +481,8 @@ RESON実装（既存のメール認証フローに2ステップ追加。管理UI
   だが、現時点では未実装・調査もしていない。
 
 登録フロー（app/(auth)/register/page.tsx）：
-  email → otp → artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認・同意必須）→ done
+  account（メール+パスワード） → [confirm-email] → artist（名前・bio） →
+  bank（出金先銀行口座） → rights（権利確認・同意必須）→ done
   審査が承認されるまでアップロード自体は可能（配信開始＝公開のゲートではなく、登録ステータス
   の可視化のみ・実際の配信停止ロジックは未実装。Phase 4の人力審査ダッシュボードで本格運用予定）。
 
@@ -494,29 +495,50 @@ RESON実装（既存のメール認証フローに2ステップ追加。管理UI
 
 ---
 
-## ログイン方式：電話番号SMS認証 → メールアドレス認証への切替（学生のSMSコスト対策）
+## ログイン方式：電話番号SMS認証 → メールアドレス+パスワード認証への切替（学生のSMSコスト対策）
 
 ```
 変更理由：SMS OTP（Twilio等）は1通あたりの送信コストが発生し、無料のStudentプラン
   ユーザー（.ed.jp認証と合わせて2重にコストがかかる構成だった）を含む全ユーザーに
-  課すには開始時点でコストが重い。Supabase Auth自体がメールOTPをネイティブサポート
-  しているため、送信コストのかからないメール認証を登録・ログインの標準フローに変更。
+  課すには開始時点でコストが重い。当初はSupabase Authのメール6桁OTPに切替えたが
+  （送信コストは無くなる）、最終的にリスナー・アーティスト全体の標準ログイン方式を
+  メールアドレス+パスワード認証に一本化した（6桁コードの都度送信自体も不要になり、
+  ログインの都度メール送受信を待つ手間も省ける）。
 
-実装（app/api/auth/send-otp・app/api/auth/verify-otp・app/(auth)/register・
-  app/(auth)/login）：
-  send-otp: supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })
-  verify-otp: supabase.auth.verifyOtp({ email, token, type: 'email' })
-  電話番号入力欄はすべてメールアドレス入力欄に置き換え（UIの6桁コード方式のUXは維持）。
-  既存のusers upsert・紹介コード記録ロジックはphone/emailの違いに依存しないため変更なし。
+実装：
+  登録：app/api/auth/register（POST { email, password, ref }）
+    supabase.auth.signUp({ email, password }) → users upsert（plan='free'）
+    → 紹介コード記録（既存のverify-otpにあったロジックをそのまま移設。phone/email/
+      passwordの違いに依存しないため変更なし）。
+    Supabaseプロジェクト設定でメール確認（Confirm email）が有効な場合はsession が
+    null で返るため、needs_email_confirmation: true をクライアントへ返し、
+    「確認メールを送信しました」画面（登録フローのstep='confirm-email'）を表示する。
+    確認済み（無効化設定時）はsessionが即時発行されるため次のstep='artist'へ進む。
+  ログイン：app/(auth)/login/page.tsx（クライアント側で直接）
+    supabase.auth.signInWithPassword({ email, password })。専用APIルートは持たず
+    ブラウザのSupabaseクライアントを直接使用する（後述の開発者用ログインと同方式）。
+  登録フロー（app/(auth)/register/page.tsx）：
+    account（メール+パスワード+確認） → [confirm-email（メール確認待ち・条件付き）]
+    → artist（名前・bio） → bank（出金先銀行口座） → rights（権利確認）→ done
 
-注意：メール送信自体はSupabase Auth組み込みのメール配信機能を使用する（Resend経由の
-  lib/email.tsとは別経路。Studentプラン認証・保護者同意通知等は引き続きlib/email.ts/
-  Resendを使用）。SupabaseプロジェクトのAuth設定でメール送信レート制限・SMTP設定
-  （本番では独自SMTP推奨、デフォルトのSupabase送信は低レート制限）の確認が必要
-  （ダッシュボード側の設定・本番導入前に確認すべき事項）。
+パスワードの再設定：
+  app/(auth)/reset-password/page.tsx
+    メールアドレスを入力 → supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    で再設定リンクをメール送信。
+  app/(auth)/reset-password/confirm/page.tsx
+    メール内リンク（redirectTo）から遷移。SupabaseブラウザクライアントがURL中の
+    recoveryトークンを検出して一時セッションを確立するのを PASSWORD_RECOVERY
+    イベントで待ち、新しいパスワードを入力 → supabase.auth.updateUser({ password })。
+  ログインページに「パスワードを忘れた場合」リンクを設置。
 
-将来、電話番号認証を併用する場合はsend-otp/verify-otpにチャネル切替パラメータを
-  追加する想定だが、現時点ではメール認証のみに一本化している。
+注意：メール送信自体はSupabase Auth組み込みのメール配信機能を使用する（確認メール・
+  再設定メールの両方。Resend経由のlib/email.tsとは別経路。Studentプラン認証・保護者
+  同意通知等は引き続きlib/email.ts/Resendを使用）。SupabaseプロジェクトのAuth設定で
+  メール送信レート制限・SMTP設定（本番では独自SMTP推奨、デフォルトのSupabase送信は
+  低レート制限）・Confirm email の有効/無効の確認が必要（ダッシュボード側の設定・
+  本番導入前に確認すべき事項）。
+
+旧実装（メールOTP・app/api/auth/send-otp・verify-otp）は本切替に伴い削除済み。
 ```
 
 ---
@@ -524,9 +546,10 @@ RESON実装（既存のメール認証フローに2ステップ追加。管理UI
 ## 開発者用ログイン（メール+パスワードのバイパス・開発/検証専用）
 
 ```
-上記のメール認証切替により電話番号OTP起因の詰まりは解消したが、開発/検証時に
-Supabase Auth設定（メールレート制限等）の影響を受けずに即時ログインできる手段
-として、既存のバイパス経路をメール認証切替後も残している：
+上記のパスワード認証への一本化により、通常のログインページ自体が開発者用ログインと
+ほぼ同じ実装になったが、Supabase Auth設定（メール確認の要否等）の影響を受けずに
+CRON_SECRET経由でアカウントを即時作成・ログインできる手段として、既存のバイパス
+経路をそのまま残している：
 
   app/api/dev/seed-account（POST・CRON_SECRET認証）
     { email, password } を受け取り、Supabase Auth ユーザーを

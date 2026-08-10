@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Step = 'email' | 'otp' | 'artist' | 'bank' | 'rights' | 'done'
+type Step = 'account' | 'confirm-email' | 'artist' | 'bank' | 'rights' | 'done'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [step, setStep] = useState<Step>('email')
+  const [step, setStep] = useState<Step>('account')
   const [email, setEmail] = useState('')
-  const [otp, setOtp] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [bankName, setBankName] = useState('')
@@ -29,36 +30,29 @@ export default function RegisterPage() {
     if (ref) sessionStorage.setItem('reson_ref', ref)
   }, [])
 
-  async function sendOtp(e: React.FormEvent) {
+  async function createAccount(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    setLoading(true)
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(data.error); return }
-    setStep('otp')
-  }
-
-  async function verifyOtp(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
+    if (password.length < 8) {
+      setError('パスワードは8文字以上で入力してください')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('パスワードが一致しません')
+      return
+    }
     setLoading(true)
     const ref = sessionStorage.getItem('reson_ref')
-    const res = await fetch('/api/auth/verify-otp', {
+    const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, token: otp, ref }),
+      body: JSON.stringify({ email, password, ref }),
     })
     const data = await res.json()
     setLoading(false)
     if (!res.ok) { setError(data.error); return }
     sessionStorage.removeItem('reson_ref')
-    setStep('artist')
+    setStep(data.needs_email_confirmation ? 'confirm-email' : 'artist')
   }
 
   function nextFromArtist(e: React.FormEvent) {
@@ -118,7 +112,7 @@ export default function RegisterPage() {
           <p className="mt-2 text-sm text-zinc-400">アーティスト登録</p>
         </div>
 
-        {step !== 'done' && <StepIndicator current={step} />}
+        {step !== 'done' && step !== 'confirm-email' && <StepIndicator current={step} />}
 
         {error && (
           <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
@@ -126,8 +120,8 @@ export default function RegisterPage() {
           </p>
         )}
 
-        {step === 'email' && (
-          <form onSubmit={sendOtp} className="space-y-4">
+        {step === 'account' && (
+          <form onSubmit={createAccount} className="space-y-4">
             <div>
               <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
               <input
@@ -139,48 +133,53 @@ export default function RegisterPage() {
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
               />
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
-            >
-              {loading ? '送信中…' : '認証コードを送信'}
-            </button>
-          </form>
-        )}
-
-        {step === 'otp' && (
-          <form onSubmit={verifyOtp} className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">認証コード</label>
+              <label className="block text-sm text-zinc-400 mb-1">パスワード</label>
               <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                placeholder="123456"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400 text-center text-2xl tracking-widest"
+                minLength={8}
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
               />
-              <p className="mt-1 text-xs text-zinc-600">{email} に送信した6桁のコード</p>
+              <p className="mt-1 text-xs text-zinc-600">8文字以上</p>
+            </div>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">パスワード（確認）</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
+              />
             </div>
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
             >
-              {loading ? '確認中…' : '認証する'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep('email')}
-              className="w-full text-sm text-zinc-500 hover:text-zinc-300 transition"
-            >
-              メールアドレスを変更する
+              {loading ? '登録中…' : 'アカウントを作成'}
             </button>
           </form>
+        )}
+
+        {step === 'confirm-email' && (
+          <div className="text-center space-y-4">
+            <p className="text-4xl">📩</p>
+            <h2 className="text-lg font-bold">確認メールを送信しました</h2>
+            <p className="text-sm text-zinc-400">
+              {email} に届いた確認リンクをクリックしてください。確認後、ログインしてアーティスト登録を続けられます。
+            </p>
+            <button
+              onClick={() => router.push('/login')}
+              className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
+            >
+              ログインへ
+            </button>
+          </div>
         )}
 
         {step === 'artist' && (
@@ -378,10 +377,9 @@ export default function RegisterPage() {
   )
 }
 
-function StepIndicator({ current }: { current: Exclude<Step, 'done'> }) {
-  const steps: { key: Exclude<Step, 'done'>; label: string }[] = [
-    { key: 'email', label: 'メールアドレス' },
-    { key: 'otp', label: 'メール認証' },
+function StepIndicator({ current }: { current: Exclude<Step, 'done' | 'confirm-email'> }) {
+  const steps: { key: Exclude<Step, 'done' | 'confirm-email'>; label: string }[] = [
+    { key: 'account', label: 'アカウント' },
     { key: 'artist', label: 'プロフィール' },
     { key: 'bank', label: '出金先' },
     { key: 'rights', label: '権利確認' },

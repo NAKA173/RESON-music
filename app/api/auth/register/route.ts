@@ -2,24 +2,23 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
-  const { email, token, ref } = await req.json()
+  const { email, password, ref } = await req.json()
 
-  if (!email || !token) {
-    return NextResponse.json({ error: 'email と token は必須です' }, { status: 400 })
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
+  }
+  if (!password || password.length < 8) {
+    return NextResponse.json({ error: 'パスワードは8文字以上で入力してください' }, { status: 400 })
   }
 
   const supabase = await createClient()
-  const { data, error } = await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: 'email',
-  })
+  const { data, error } = await supabase.auth.signUp({ email, password })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
 
-  // users テーブルに upsert（初回ログイン時のみ INSERT される）
+  // users テーブルに upsert（初回登録時のみ INSERT される）
   const userId = data.user?.id
   if (userId) {
     const { data: existingUser } = await supabase
@@ -52,5 +51,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, user_id: userId })
+  // Supabase側でメール確認が有効な場合、session は null で返る（確認リンククリック後にログイン可能）
+  return NextResponse.json({
+    ok: true,
+    user_id: userId,
+    needs_email_confirmation: !data.session,
+  })
 }
