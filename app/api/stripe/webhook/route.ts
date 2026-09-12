@@ -97,13 +97,15 @@ async function handleTipSucceeded(
     .single()
   if (existing) return
 
-  await supabase.from('supports').insert({
+  const { error: insertError } = await supabase.from('supports').insert({
     track_id,
     user_id,
     amount_yen: Number(net_yen),
     payment_id: providerChargeId,
     track_plays_at_support: track_plays_at_support ? Number(track_plays_at_support) : null,
   })
+  if (insertError?.code === '23505') return
+  if (insertError) throw insertError
 
   // Support+ は月末の settle_support_plus_tips で精算するため、ここでは即時加算しない
   const { data: userData } = await supabase.from('users').select('plan').eq('id', user_id).single()
@@ -136,7 +138,7 @@ async function handleBoostSucceeded(
     .single()
   if (existing) return
 
-  await supabase.from('boost_hearts').insert({
+  const { error: insertError } = await supabase.from('boost_hearts').insert({
     track_id,
     user_id,
     year_month,
@@ -144,6 +146,8 @@ async function handleBoostSucceeded(
     payment_id: providerChargeId,
     billed: true,
   })
+  if (insertError?.code === '23505') return
+  if (insertError) throw insertError
 
   const { data: track } = await supabase.from('tracks').select('artist_id').eq('id', track_id).single()
   if (!track) return
