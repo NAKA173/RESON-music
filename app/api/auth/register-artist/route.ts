@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'すでにアーティスト登録済みです' }, { status: 409 })
   }
 
-  const { data: artist, error } = await supabase
+  const service = createServiceClient()
+  const { data: artist, error } = await service
     .from('artists')
     .insert({
       user_id: user.id,
@@ -58,9 +59,6 @@ export async function POST(req: NextRequest) {
       review_status: 'pending',
       rights_confirmed: true,
       rights_confirmed_at: new Date().toISOString(),
-      is_minor: is_minor === true,
-      parent_consent_name: is_minor === true ? parent_consent_name.trim() : null,
-      parent_consent_contact: is_minor === true ? parent_consent_contact.trim() : null,
     })
     .select('id, name, review_status')
     .single()
@@ -69,7 +67,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const { error: bankError } = await supabase.from('artist_bank_accounts').insert({
+  const { error: consentError } = await service.from('artist_guardian_consents').insert({
+    artist_id: artist.id,
+    is_minor: is_minor === true,
+    parent_consent_name: is_minor === true ? parent_consent_name.trim() : null,
+    parent_consent_contact: is_minor === true ? parent_consent_contact.trim() : null,
+  })
+  if (consentError) {
+    return NextResponse.json({ error: consentError.message }, { status: 500 })
+  }
+
+  const { error: bankError } = await service.from('artist_bank_accounts').insert({
     artist_id: artist.id,
     bank_name: bank.bank_name.trim(),
     branch_name: bank.branch_name.trim(),

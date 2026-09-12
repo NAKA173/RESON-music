@@ -25,11 +25,15 @@ export function buildAlbumCoverR2Key(artistId: string, albumId: string, ext: str
 }
 
 /** アップロード用署名付きURL（5分有効） */
-export async function getUploadUrl(key: string, contentType: string) {
+export async function getUploadUrl(key: string, contentType: string, contentLength: number) {
   const cmd = new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     ContentType: contentType,
+    // Content-Length becomes a signed header. R2 rejects a body with a
+    // different size, preventing a presigned URL from being used for an
+    // unbounded upload.
+    ContentLength: contentLength,
   })
   return getSignedUrl(r2, cmd, { expiresIn: 300 })
 }

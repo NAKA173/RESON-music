@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import { hasValidCronAuthorization } from '@/lib/cron-auth'
 import { runMonthlyDistribution } from '@/lib/distribution/batch'
 import { runCuratorBatch } from '@/lib/curator'
 import { NextRequest, NextResponse } from 'next/server'
@@ -6,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 // 管理者専用エンドポイント（Vercel Cron or 手動実行）
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasValidCronAuthorization(authHeader)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

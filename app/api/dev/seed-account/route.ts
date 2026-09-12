@@ -1,12 +1,18 @@
 import { createServiceClient } from '@/lib/supabase/server'
+import { hasValidCronAuthorization } from '@/lib/cron-auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 // 開発者用アカウント作成（電話番号SMS認証をバイパスする）。
 // SupabaseのSMSプロバイダ設定に問題がある場合の緊急避難用。CRON_SECRETで保護し、
 // 誰でも叩けないようにする（本番運用では使わない想定・開発/検証専用）。
 export async function POST(req: NextRequest) {
+  // This endpoint can mint an administrator and reset passwords, so it must
+  // never exist in a production deployment even if a secret is configured.
+  if (process.env.NODE_ENV !== 'development' || process.env.ENABLE_DEV_SEED_ACCOUNT !== 'true') {
+    return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+  }
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasValidCronAuthorization(authHeader)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

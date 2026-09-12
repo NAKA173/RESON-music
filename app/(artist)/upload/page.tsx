@@ -7,6 +7,7 @@ import { computeClientFingerprint } from '@/lib/audio/client-fingerprint'
 const ALLOWED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/flac', 'audio/wav', 'audio/ogg']
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_SIZE_MB = 200
+const MAX_IMAGE_SIZE_MB = 10
 const MAX_GENRES = 3
 
 interface Genre {
@@ -113,13 +114,17 @@ export default function UploadPage() {
       setError('ジャケット画像はJPEG/PNG/WebP形式のみ対応しています')
       return
     }
+    if (f.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      setError(`ジャケット画像は${MAX_IMAGE_SIZE_MB}MB以内にしてください`)
+      return
+    }
     setError('')
     setAlbumCoverUploading(true)
     setAlbumCoverDone(false)
     const metaRes = await fetch('/api/albums/cover-upload-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ album_id: albumId, content_type: f.type }),
+      body: JSON.stringify({ album_id: albumId, content_type: f.type, content_length: f.size }),
     })
     const meta = await metaRes.json()
     if (!metaRes.ok) {
@@ -142,6 +147,10 @@ export default function UploadPage() {
     if (!f) return
     if (!ALLOWED_IMAGE_TYPES.includes(f.type)) {
       setError('ジャケット画像はJPEG/PNG/WebP形式のみ対応しています')
+      return
+    }
+    if (f.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+      setError(`ジャケット画像は${MAX_IMAGE_SIZE_MB}MB以内にしてください`)
       return
     }
     setError('')
@@ -180,6 +189,7 @@ export default function UploadPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content_type: file.type,
+        content_length: file.size,
         title,
         duration_sec,
         ai_generated: aiGenerated,
@@ -219,7 +229,7 @@ export default function UploadPage() {
       const coverMetaRes = await fetch('/api/tracks/cover-upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ track_id: meta.track_id, content_type: coverFile.type }),
+        body: JSON.stringify({ track_id: meta.track_id, content_type: coverFile.type, content_length: coverFile.size }),
       })
       const coverMeta = await coverMetaRes.json()
       if (coverMetaRes.ok) {

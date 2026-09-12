@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { buildR2Key, getUploadUrl, getAudioExt } from '@/lib/audio'
 import { normalizeIsrc, isValidIsrc } from '@/lib/isrc'
 import { NextRequest, NextResponse } from 'next/server'
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
-  const { content_type, title, duration_sec, ai_generated, genre_ids, album_id, track_number, isrc } = await req.json()
+  const { content_type, content_length, title, duration_sec, ai_generated, genre_ids, album_id, track_number, isrc } = await req.json()
 
   const ext = getAudioExt(content_type)
   if (!ext) {
@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
   }
   if (!duration_sec || duration_sec < 1 || duration_sec > 7200) {
     return NextResponse.json({ error: '楽曲の長さが不正です' }, { status: 400 })
+  }
+  if (!Number.isSafeInteger(content_length) || content_length < 1 || content_length > 200 * 1024 * 1024) {
+    return NextResponse.json({ error: 'ファイルサイズは1〜200MBで指定してください' }, { status: 400 })
   }
 
   let normalizedIsrc: string | null = null
@@ -59,7 +62,8 @@ export async function POST(req: NextRequest) {
   const r2Key = buildR2Key(artist.id, trackId, ext)
 
   // tracks に pending レコードを作成（r2_key を確保）
-  const { error: insertError } = await supabase.from('tracks').insert({
+  const service = createServiceClient()
+  const { error: insertError } = await service.from('tracks').insert({
     id: trackId,
     artist_id: artist.id,
     title: title.trim(),
@@ -76,12 +80,12 @@ export async function POST(req: NextRequest) {
   }
 
   if (Array.isArray(genre_ids) && genre_ids.length > 0) {
-    await supabase
+    await service
       .from('track_genres')
       .insert(genre_ids.slice(0, 3).map((genre_id: string) => ({ track_id: trackId, genre_id })))
   }
 
-  const uploadUrl = await getUploadUrl(r2Key, content_type)
+  const uploadUrl = await getUploadUrl(r2Key, content_type, content_length)
 
   return NextResponse.json({ track_id: trackId, upload_url: uploadUrl, r2_key: r2Key })
 }
