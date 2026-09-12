@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { paymentProvider } from '@/lib/payment'
 import { NextRequest, NextResponse } from 'next/server'
 import type { UserPlan } from '@/lib/distribution'
@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
   }
 
+  const service = await createServiceClient()
   const { track_id, amount_yen } = await req.json()
 
   if (!track_id) {
@@ -42,12 +43,15 @@ export async function POST(req: NextRequest) {
 
   // ❤️のみ（amount_yen = 0 or 未指定）
   if (!amount_yen || amount_yen === 0) {
-    await supabase.from('supports').insert({
+    const { error } = await service.from('supports').insert({
       track_id,
       user_id: user.id,
       amount_yen: 0,
       track_plays_at_support: track.cumulative_plays,
     })
+    if (error) {
+      return NextResponse.json({ error: '応援の記録に失敗しました' }, { status: 500 })
+    }
     return NextResponse.json({ ok: true, type: 'heart' })
   }
 
@@ -63,11 +67,15 @@ export async function POST(req: NextRequest) {
 
   // Support+ は月間蓄積なので PaymentIntent は作らず DB に記録
   if (plan === 'support_plus') {
-    const { data: support } = await supabase
+    const { data: support, error } = await service
       .from('supports')
       .insert({ track_id, user_id: user.id, amount_yen, track_plays_at_support: track.cumulative_plays })
       .select('id')
       .single()
+
+    if (error) {
+      return NextResponse.json({ error: '応援の記録に失敗しました' }, { status: 500 })
+    }
 
     return NextResponse.json({ ok: true, type: 'tip_deferred', support_id: support?.id })
   }
