@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isCodeExpired, MAX_VERIFY_ATTEMPTS } from '@/lib/student/verify'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
     .update({ verified: true })
     .eq('id', verification.id)
 
-  await supabase
+  const service = await createServiceClient()
+  await service
     .from('users')
     .update({ student_verified: true })
     .eq('id', user.id)
