@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 export const r2 = new S3Client({
@@ -40,9 +40,21 @@ export async function getUploadUrl(key: string, contentType: string, contentLeng
 
 /** 再生用署名付きURL（1時間有効） */
 export async function getStreamUrl(key: string) {
-  const { GetObjectCommand } = await import('@aws-sdk/client-s3')
   const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key })
   return getSignedUrl(r2, cmd, { expiresIn: 3600 })
+}
+
+/**
+ * R2 の音声をサーバーから中継する。署名付き URL をブラウザへ渡さないため、
+ * URL 単体をコピーしての取得を防げる。
+ */
+export async function getStreamObject(key: string, range?: string) {
+  const cmd = new GetObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    ...(range ? { Range: range } : {}),
+  })
+  return r2.send(cmd)
 }
 
 export async function deleteObject(key: string) {
