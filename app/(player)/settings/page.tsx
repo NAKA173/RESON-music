@@ -47,9 +47,41 @@ const DEFAULTS: Settings = {
   listening_data_use: true,
 }
 
+function Toggle({ id, value, onChange }: { id: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="shrink-0 mt-0.5">
+      <button
+        role="switch"
+        aria-checked={value}
+        aria-label="設定を切り替える"
+        id={id}
+        onClick={() => onChange(!value)}
+        className={`relative w-10 h-[22px] rounded-full transition-colors ${value ? 'bg-white' : 'bg-zinc-600'}`}
+      >
+        <span
+          className={`absolute top-[2px] left-[2px] w-[18px] h-[18px] bg-black rounded-full transition-transform ${value ? 'translate-x-[18px]' : ''}`}
+        />
+      </button>
+    </div>
+  )
+}
+
+function Select({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="text-[13px] px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-white cursor-pointer min-w-[130px] shrink-0"
+    >
+      {options.map((o) => <option key={o}>{o}</option>)}
+    </select>
+  )
+}
+
 export default function SettingsPage() {
   const [s, setS] = useState<Settings>(DEFAULTS)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetch('/api/settings')
@@ -62,54 +94,38 @@ export default function SettingsPage() {
   }, [])
 
   const update = useCallback(async (patch: Partial<Settings>) => {
-    setS((prev) => ({ ...prev, ...patch }))
-    setSaving(true)
-    await fetch('/api/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(patch),
+    if (saving) return
+    let previous: Settings | undefined
+    setS((current) => {
+      previous = current
+      return { ...current, ...patch }
     })
-    setSaving(false)
-  }, [])
-
-  function Toggle({ id, value, onChange }: { id: string; value: boolean; onChange: (v: boolean) => void }) {
-    return (
-      <div className="shrink-0 mt-0.5">
-        <button
-          role="switch"
-          aria-checked={value}
-          id={id}
-          onClick={() => onChange(!value)}
-          className={`relative w-10 h-[22px] rounded-full transition-colors ${value ? 'bg-white' : 'bg-zinc-600'}`}
-        >
-          <span
-            className={`absolute top-[2px] left-[2px] w-[18px] h-[18px] bg-black rounded-full transition-transform ${value ? 'translate-x-[18px]' : ''}`}
-          />
-        </button>
-      </div>
-    )
-  }
-
-  function Select({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
-    return (
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="text-[13px] px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-white cursor-pointer min-w-[130px] shrink-0"
-      >
-        {options.map((o) => <option key={o}>{o}</option>)}
-      </select>
-    )
-  }
+    setSaving(true)
+    setError('')
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      if (!response.ok) throw new Error('settings update failed')
+    } catch {
+      if (previous) setS(previous)
+      setError('保存に失敗しました。接続を確認してもう一度お試しください。')
+    } finally {
+      setSaving(false)
+    }
+  }, [saving])
 
   return (
-    <main className="min-h-screen bg-black text-white px-4 py-8">
+    <main aria-busy={saving} className="min-h-screen bg-black text-white px-4 py-8">
       <div className="max-w-[680px] mx-auto">
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-[22px] font-medium">プライバシーと機能</h1>
           {saving && <span className="text-xs text-zinc-500">保存中…</span>}
         </div>
         <p className="text-sm text-zinc-500 mb-8">Resonの各機能について、参加するかどうかを選べます。</p>
+        {error && <p role="alert" className="mb-4 rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-300">{error}</p>}
 
         {/* 表示設定 */}
         <Section title="表示">

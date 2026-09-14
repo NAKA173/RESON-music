@@ -2,9 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type Step = 'account' | 'role' | 'confirm-email' | 'artist' | 'bank' | 'rights' | 'done'
 type Role = 'listener' | 'artist'
+
+async function readJson(response: Response): Promise<{ error?: string; needs_email_confirmation?: boolean }> {
+  try {
+    return await response.json()
+  } catch {
+    return {}
+  }
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -45,18 +54,26 @@ export default function RegisterPage() {
       return
     }
     setLoading(true)
-    const ref = sessionStorage.getItem('reson_ref')
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, ref }),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(data.error); return }
-    sessionStorage.removeItem('reson_ref')
-    setNeedsConfirmation(!!data.needs_email_confirmation)
-    setStep('role')
+    try {
+      const ref = sessionStorage.getItem('reson_ref')
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, ref }),
+      })
+      const data = await readJson(res)
+      if (!res.ok) {
+        setError(data.error ?? '登録を完了できませんでした。時間をおいて再試行してください。')
+        return
+      }
+      sessionStorage.removeItem('reson_ref')
+      setNeedsConfirmation(!!data.needs_email_confirmation)
+      setStep('role')
+    } catch {
+      setError('通信に失敗しました。接続を確認してもう一度お試しください。')
+    } finally {
+      setLoading(false)
+    }
   }
 
   function chooseRole(chosen: Role) {
@@ -96,29 +113,37 @@ export default function RegisterPage() {
     }
     setError('')
     setLoading(true)
-    const res = await fetch('/api/auth/register-artist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        bio,
-        rights_confirmed: rightsConfirmed,
-        bank: {
-          bank_name: bankName,
-          branch_name: branchName,
-          account_type: accountType,
-          account_number: accountNumber,
-          account_holder_name: accountHolderName,
-        },
-        is_minor: isMinor,
-        parent_consent_name: isMinor ? parentConsentName : undefined,
-        parent_consent_contact: isMinor ? parentConsentContact : undefined,
-      }),
-    })
-    const data = await res.json()
-    setLoading(false)
-    if (!res.ok) { setError(data.error); return }
-    setStep('done')
+    try {
+      const res = await fetch('/api/auth/register-artist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          bio,
+          rights_confirmed: rightsConfirmed,
+          bank: {
+            bank_name: bankName,
+            branch_name: branchName,
+            account_type: accountType,
+            account_number: accountNumber,
+            account_holder_name: accountHolderName,
+          },
+          is_minor: isMinor,
+          parent_consent_name: isMinor ? parentConsentName : undefined,
+          parent_consent_contact: isMinor ? parentConsentContact : undefined,
+        }),
+      })
+      const data = await readJson(res)
+      if (!res.ok) {
+        setError(data.error ?? '登録申請を完了できませんでした。時間をおいて再試行してください。')
+        return
+      }
+      setStep('done')
+    } catch {
+      setError('通信に失敗しました。接続を確認してもう一度お試しください。')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -134,7 +159,7 @@ export default function RegisterPage() {
         )}
 
         {error && (
-          <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
+          <p role="alert" aria-live="assertive" className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
             {error}
           </p>
         )}
@@ -145,6 +170,7 @@ export default function RegisterPage() {
               <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
               <input
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -156,6 +182,7 @@ export default function RegisterPage() {
               <label className="block text-sm text-zinc-400 mb-1">パスワード</label>
               <input
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -168,6 +195,7 @@ export default function RegisterPage() {
               <label className="block text-sm text-zinc-400 mb-1">パスワード（確認）</label>
               <input
                 type="password"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -178,10 +206,15 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
+              aria-busy={loading}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
             >
               {loading ? '登録中…' : 'アカウントを作成'}
             </button>
+            <p className="text-center text-sm text-zinc-500">
+              すでにアカウントをお持ちの方は{' '}
+              <Link href="/login" className="text-white hover:underline">ログイン</Link>
+            </p>
           </form>
         )}
 
