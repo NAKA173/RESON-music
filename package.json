@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "sbom": "npm sbom --sbom-format=cyclonedx > sbom.cdx.json && npm sbom --sbom-format=spdx > sbom.spdx.json"
+    "sbom": "npm sbom --package-lock-only --sbom-type=application --sbom-format=cyclonedx > sbom.cdx.json && npm sbom --package-lock-only --sbom-type=application --sbom-format=spdx > sbom.spdx.json"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
