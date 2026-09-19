@@ -1,6 +1,39 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const desktopChrome = { ...devices['Desktop Chrome'] }
+const crossBrowser = process.env.E2E_CROSS_BROWSER === 'true'
+
+const crossBrowserProjects = crossBrowser
+  ? [
+      {
+        name: 'critical-firefox',
+        testMatch: /critical-flows\.spec\.mjs/,
+        dependencies: ['setup'],
+        use: {
+          ...devices['Desktop Firefox'],
+          storageState: './.auth/artist.json',
+        },
+      },
+      {
+        name: 'critical-webkit',
+        testMatch: /critical-flows\.spec\.mjs/,
+        dependencies: ['setup'],
+        use: {
+          ...devices['Desktop Safari'],
+          storageState: './.auth/artist.json',
+        },
+      },
+      {
+        name: 'critical-mobile-webkit',
+        testMatch: /critical-flows\.spec\.mjs/,
+        dependencies: ['setup'],
+        use: {
+          ...devices['iPhone 12'],
+          storageState: './.auth/artist.json',
+        },
+      },
+    ]
+  : []
 
 export default defineConfig({
   testDir: './tests',
@@ -34,13 +67,14 @@ export default defineConfig({
     },
     {
       name: 'authenticated-chromium',
-      testMatch: /authenticated\.spec\.mjs/,
+      testMatch: /(authenticated|critical-flows)\.spec\.mjs/,
       dependencies: ['setup'],
       use: {
         ...desktopChrome,
         storageState: './.auth/artist.json',
       },
     },
+    ...crossBrowserProjects,
   ],
   webServer: {
     command: 'npm --prefix .. run dev -- --hostname 127.0.0.1',

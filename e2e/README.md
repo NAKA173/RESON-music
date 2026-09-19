@@ -1,6 +1,6 @@
 # Playwright E2E
 
-The E2E suite runs public smoke tests plus authenticated listener/artist flows against an isolated local Supabase stack.
+The E2E suite runs public smoke tests, authenticated listener/artist flows, and critical mocked browser journeys against an isolated local Supabase stack.
 
 ## Requirements
 
@@ -49,10 +49,25 @@ supabase stop
 
 - `public-chromium`: landing, login, register, privacy, navigation, and middleware security headers
 - `setup`: creates an isolated development artist account through the development-only seed endpoint, signs in, and saves browser authentication state
-- `authenticated-chromium`: reuses that `storageState` for `/home`, `/dashboard`, and `/upload`
+- `authenticated-chromium`: reuses that `storageState` for private routes and critical browser flows
+- scheduled-only critical projects: Desktop Firefox, Desktop Safari/WebKit, and iPhone 12/WebKit emulation
 
 The seed endpoint remains disabled unless both development mode and `ENABLE_DEV_SEED_ACCOUNT=true` are active. CI uses only the local Supabase service-role key.
 
-## External services
+## Critical browser flows
 
-Authenticated smoke tests do not call Stripe or Cloudflare R2. Upload/payment transactions remain outside this phase and will be tested later with explicit network-boundary mocks rather than real external credentials.
+The critical-flow suite covers:
+
+- playlist creation
+- playlist track switching and heart support UI
+- Standard checkout initiation
+- Student email/code verification before checkout
+- upload file-type validation
+- album creation from the upload screen
+- a valid WAV upload through a mocked signed upload URL, mocked R2 PUT, AI check, and fingerprint endpoint
+
+Stripe and Cloudflare R2 are never contacted by these tests. The browser requests are intercepted at the network boundary and their payloads are asserted. The actual WAV decode/upload browser path is kept on Chromium; the surrounding critical UI flows run in the scheduled Firefox/WebKit projects.
+
+## CI browser matrix
+
+Pull requests and ordinary pushes run Chromium for fast feedback. A weekly scheduled run installs Chromium, Firefox, and WebKit, then executes the critical mocked flows on Firefox, desktop WebKit, and mobile WebKit in addition to the Chromium suite.

@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - claude/new-session-b6um0m
+  schedule:
+    - cron: '0 3 * * 1'
   workflow_dispatch: {}
 
 permissions:
@@ -16,9 +18,9 @@ concurrency:
 
 jobs:
   e2e:
-    name: Chromium E2E
+    name: Browser E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -43,9 +45,15 @@ jobs:
         working-directory: e2e
         run: npm install --no-audit --no-fund
 
-      - name: Install Chromium and system dependencies
+      - name: Install Playwright browsers and system dependencies
         working-directory: e2e
-        run: npx playwright install --with-deps chromium
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            npx playwright install --with-deps chromium firefox webkit
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Start local Supabase
         run: supabase start
@@ -67,6 +75,8 @@ jobs:
 
       - name: Run Playwright tests
         working-directory: e2e
+        env:
+          E2E_CROSS_BROWSER: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
         run: npm test
 
       - name: Upload Playwright diagnostics
