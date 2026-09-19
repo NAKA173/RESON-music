@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
   e2e:
-    name: Chromium smoke tests
+    name: Chromium E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -31,6 +31,11 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
       - name: Install application dependencies
         run: npm ci
 
@@ -42,7 +47,25 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright smoke tests
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Export local Supabase environment
+        shell: bash
+        run: |
+          set -a
+          source <(supabase status -o env)
+          set +a
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=${API_URL}"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
+            echo "ENABLE_DEV_SEED_ACCOUNT=true"
+            echo "CRON_SECRET=e2e-local-cron-secret"
+            echo "E2E_CRON_SECRET=e2e-local-cron-secret"
+          } >> "$GITHUB_ENV"
+
+      - name: Run Playwright tests
         working-directory: e2e
         run: npm test
 
@@ -56,3 +79,7 @@ jobs:
             e2e/test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Stop local Supabase
+        if: always()
+        run: supabase stop --no-backup

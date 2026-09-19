@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const desktopChrome = { ...devices['Desktop Chrome'] }
+
 export default defineConfig({
   testDir: './tests',
   timeout: 30_000,
@@ -21,8 +23,23 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'setup',
+      testMatch: /auth\.setup\.mjs/,
+      use: desktopChrome,
+    },
+    {
+      name: 'public-chromium',
+      testMatch: /public-pages\.spec\.mjs/,
+      use: desktopChrome,
+    },
+    {
+      name: 'authenticated-chromium',
+      testMatch: /authenticated\.spec\.mjs/,
+      dependencies: ['setup'],
+      use: {
+        ...desktopChrome,
+        storageState: './.auth/artist.json',
+      },
     },
   ],
   webServer: {

@@ -75,7 +75,7 @@ insert into support_plus_tip_batches (
   true
 );
 
-\ir ../../supabase/migrations/20260033_support_plus_ledger.sql
+\ir ../../supabase/migrations/2026003301_support_plus_ledger.sql
 \ir ../../supabase/migrations/20260034_support_plus_legacy_quarantine.sql
 \ir ../../supabase/migrations/20260035_support_plus_webhook_recovery.sql
 \ir ../../supabase/migrations/20260036_support_plus_payment_binding.sql
