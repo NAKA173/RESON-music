@@ -211,6 +211,9 @@ export default function RegisterPage() {
             >
               {loading ? '登録中…' : 'アカウントを作成'}
             </button>
+            <p className="text-center text-xs leading-5 text-zinc-500">
+              登録前に<Link href="/privacy" className="underline hover:text-white">個人データの取扱い</Link>をご確認ください。
+            </p>
             <p className="text-center text-sm text-zinc-500">
               すでにアカウントをお持ちの方は{' '}
               <Link href="/login" className="text-white hover:underline">ログイン</Link>

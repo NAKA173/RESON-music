@@ -259,6 +259,7 @@ export default function LandingPage() {
             <a href="#about" className="hover:text-[var(--text)]">思想</a>
             <a href="#pricing" className="hover:text-[var(--text)]">料金</a>
             <a href="#artists" className="hover:text-[var(--text)]">アーティスト</a>
+            <Link href="/privacy" className="hover:text-[var(--text)]">個人データの取扱い</Link>
           </nav>
           <p className="text-xs text-[var(--faint)]">© {new Date().getFullYear()} RESON</p>
         </div>
