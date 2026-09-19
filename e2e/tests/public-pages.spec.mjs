@@ -13,8 +13,8 @@ test.describe('public pages', () => {
     await page.goto('/login')
 
     await expect(page.getByRole('heading', { name: 'RESON' })).toBeVisible()
-    await expect(page.getByLabel('メールアドレス')).toBeVisible()
-    await expect(page.getByLabel('パスワード')).toBeVisible()
+    await expect(page.getByPlaceholder('you@example.com')).toBeVisible()
+    await expect(page.locator('input[type="password"]')).toBeVisible()
     await expect(page.getByRole('button', { name: 'ログイン' })).toBeVisible()
   })
 
