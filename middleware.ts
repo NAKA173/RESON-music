@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-
-const PUBLIC_PATHS = ['/login', '/register', '/reset-password', '/dev-login']
+import { isPublicPath } from '@/lib/auth/public-paths'
 
 // These endpoints authenticate server-to-server requests themselves (Stripe signature / CRON_SECRET).
 // They must not require a Supabase browser session in middleware.
@@ -33,7 +32,7 @@ export async function middleware(request: NextRequest) {
     return withSecurityHeaders(NextResponse.next())
   }
 
-  const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p)) || path === '/'
+  const isPublic = isPublicPath(path)
   // 公開ページではセッション更新が不要。ここでSupabaseへ接続しないことで、閲覧だけの
   // ページを認証基盤の一時障害から切り離し、静的プレビューも安定させる。
   if (isPublic) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import Link from 'next/link'
 
 interface Settings {
   is_private: boolean
@@ -27,8 +28,8 @@ interface Settings {
 
 const DEFAULTS: Settings = {
   is_private: false,
-  profile_public: true,
-  feed_enabled: true,
+  profile_public: false,
+  feed_enabled: false,
   follow_enabled: true,
   matching_enabled: true,
   comment_enabled: true,
@@ -44,7 +45,7 @@ const DEFAULTS: Settings = {
   exclusive_content: true,
   backer_community: true,
   score_public: true,
-  listening_data_use: true,
+  listening_data_use: false,
 }
 
 function Toggle({ id, value, onChange }: { id: string; value: boolean; onChange: (v: boolean) => void }) {
@@ -80,17 +81,23 @@ function Select({ value, options, onChange }: { value: string; options: string[]
 
 export default function SettingsPage() {
   const [s, setS] = useState<Settings>(DEFAULTS)
+  const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     fetch('/api/settings')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('settings fetch failed')
+        return r.json()
+      })
       .then((d) => {
         if (d.settings && Object.keys(d.settings).length > 0) {
           setS({ ...DEFAULTS, ...d.settings })
         }
+        setLoaded(true)
       })
+      .catch(() => setError('設定を取得できませんでした。再読み込みしてください。'))
   }, [])
 
   const update = useCallback(async (patch: Partial<Settings>) => {
@@ -116,6 +123,20 @@ export default function SettingsPage() {
       setSaving(false)
     }
   }, [saving])
+
+  if (!loaded) {
+    return (
+      <main className="min-h-screen bg-black px-4 py-8 text-white">
+        <div className="mx-auto max-w-[680px]">
+          <h1 className="text-[22px] font-medium">プライバシーと機能</h1>
+          <p role={error ? 'alert' : 'status'} className="mt-5 text-sm text-zinc-400">
+            {error || '設定を読み込み中…'}
+          </p>
+          {error && <button onClick={() => window.location.reload()} className="mt-4 text-sm underline">再読み込み</button>}
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main aria-busy={saving} className="min-h-screen bg-black text-white px-4 py-8">
@@ -149,7 +170,7 @@ export default function SettingsPage() {
                 非公開アカウント
               </p>
               <p className="text-[13px] text-zinc-500 mt-0.5 leading-relaxed">
-                オンにすると、フォローリクエストを承認した人だけがあなたの投稿・プロフィールを見られます。
+                オンにすると、公開設定にかかわらずプロフィールと投稿を他の利用者から非表示にします。
               </p>
             </div>
             <Toggle id="t-private" value={s.is_private} onChange={(v) => update({ is_private: v })} />
@@ -252,10 +273,15 @@ export default function SettingsPage() {
             <Row label="信頼度スコアの公開" desc="新人発見数・レビュー評価などの指標を表示">
               <Toggle id="t-score" value={s.score_public} onChange={(v) => update({ score_public: v })} />
             </Row>
-            <Row label="リスニングデータの利用" desc="マッチング・レコメンドへの聴取データ使用を許可" last>
+            <Row label="リスニングデータの利用" desc="オンにした場合のみ、聴取履歴をおすすめと音楽人格タグの提案に利用します。いつでもオフにできます。再生・分配に必要な記録は継続します。" last>
               <Toggle id="t-listen" value={s.listening_data_use} onChange={(v) => update({ listening_data_use: v })} />
             </Row>
           </Card>
+        </Section>
+        <Section title="個人データの請求">
+          <Link href="/privacy-requests" className="block rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-4 text-sm text-white hover:border-zinc-600">
+            開示・移転用コピー・削除などを請求する →
+          </Link>
         </Section>
       </div>
     </main>
