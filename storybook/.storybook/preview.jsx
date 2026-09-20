@@ -51,6 +51,6 @@ export const parameters = {
     },
   },
   a11y: {
-    test: 'todo',
+    test: 'error',
   },
 }

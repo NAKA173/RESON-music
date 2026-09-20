@@ -1,7 +1,7 @@
 /** @type { import('@storybook/nextjs-vite').StorybookConfig } */
 const config = {
   stories: ['../stories/**/*.stories.@(js|jsx)'],
-  addons: ['@storybook/addon-a11y'],
+  addons: ['@storybook/addon-a11y', '@storybook/addon-vitest'],
   framework: {
     name: '@storybook/nextjs-vite',
     options: {},
