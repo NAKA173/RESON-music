@@ -19,10 +19,15 @@ interface PaymentConfirmModalProps {
 export function PaymentConfirmModal({ clientSecret, title, onSuccess, onClose }: PaymentConfirmModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payment-confirm-title"
+        className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5"
+      >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">{title}</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white">✕</button>
+          <h3 id="payment-confirm-title" className="text-sm font-semibold">{title}</h3>
+          <button onClick={onClose} aria-label="決済ダイアログを閉じる" className="text-zinc-500 hover:text-white">✕</button>
         </div>
         <Elements stripe={getStripeClient()} options={{ clientSecret }}>
           <ConfirmForm onSuccess={onSuccess} onClose={onClose} />

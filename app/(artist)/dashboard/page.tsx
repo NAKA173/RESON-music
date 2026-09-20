@@ -479,6 +479,7 @@ export default function DashboardPage() {
           ) : (
             <form onSubmit={saveBankAccount} className="space-y-2">
               <input
+                aria-label="銀行名"
                 value={bankForm.bank_name}
                 onChange={(e) => setBankForm({ ...bankForm, bank_name: e.target.value })}
                 placeholder="銀行名"
@@ -486,6 +487,7 @@ export default function DashboardPage() {
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
               />
               <input
+                aria-label="支店名"
                 value={bankForm.branch_name}
                 onChange={(e) => setBankForm({ ...bankForm, branch_name: e.target.value })}
                 placeholder="支店名"
@@ -493,6 +495,7 @@ export default function DashboardPage() {
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
               />
               <select
+                aria-label="口座種別"
                 value={bankForm.account_type}
                 onChange={(e) => setBankForm({ ...bankForm, account_type: e.target.value as 'ordinary' | 'checking' })}
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-zinc-400"
@@ -501,6 +504,7 @@ export default function DashboardPage() {
                 <option value="checking">当座</option>
               </select>
               <input
+                aria-label="口座番号"
                 value={bankForm.account_number}
                 onChange={(e) => setBankForm({ ...bankForm, account_number: e.target.value })}
                 placeholder="口座番号"
@@ -508,6 +512,7 @@ export default function DashboardPage() {
                 className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
               />
               <input
+                aria-label="口座名義"
                 value={bankForm.account_holder_name}
                 onChange={(e) => setBankForm({ ...bankForm, account_holder_name: e.target.value })}
                 placeholder="口座名義（カナ）"

@@ -78,10 +78,21 @@ export function SupportButton({ trackId }: { trackId: string }) {
 
       {showTipForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5 space-y-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="support-tip-title"
+            className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5 space-y-4"
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">投げ銭する</h3>
-              <button onClick={() => setShowTipForm(false)} className="text-zinc-500 hover:text-white">✕</button>
+              <h3 id="support-tip-title" className="text-sm font-semibold">投げ銭する</h3>
+              <button
+                onClick={() => setShowTipForm(false)}
+                aria-label="投げ銭ダイアログを閉じる"
+                className="text-zinc-500 hover:text-white"
+              >
+                ✕
+              </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {TIP_PRESETS.map((amt) => (

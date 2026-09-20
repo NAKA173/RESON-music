@@ -160,6 +160,7 @@ function PlaylistDetailContent() {
         {isOwner && (
           <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <input
+              aria-label="プレイリストに追加する楽曲を検索"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="楽曲名で検索して追加…"
