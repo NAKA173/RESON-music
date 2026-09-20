@@ -151,8 +151,9 @@ export default function ProfilePage() {
         ) : (
           <form onSubmit={save} className="mt-6 space-y-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div>
-              <label className="text-xs text-[var(--faint)]">表示名</label>
+              <label htmlFor="profile-display-name" className="text-xs text-[var(--faint)]">表示名</label>
               <input
+                id="profile-display-name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 maxLength={50}
@@ -160,8 +161,9 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="text-xs text-[var(--faint)]">自己紹介</label>
+              <label htmlFor="profile-bio" className="text-xs text-[var(--faint)]">自己紹介</label>
               <textarea
+                id="profile-bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 maxLength={280}
@@ -170,8 +172,9 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="text-xs text-[var(--faint)]">音楽人格タグ（カンマ区切り・最大10個）</label>
+              <label htmlFor="profile-persona-tags" className="text-xs text-[var(--faint)]">音楽人格タグ（カンマ区切り・最大10個）</label>
               <input
+                id="profile-persona-tags"
                 value={personaTags}
                 onChange={(e) => setPersonaTags(e.target.value)}
                 placeholder="例: シティポップ, 夜更かし, ギターロック"
@@ -214,6 +217,7 @@ export default function ProfilePage() {
 
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <input
+            aria-label="ベストトラックに追加する楽曲を検索"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="楽曲名で検索して追加…"

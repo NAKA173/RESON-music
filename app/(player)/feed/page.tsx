@@ -176,6 +176,7 @@ function FeedPageInner() {
 
         <form onSubmit={submitPost} className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <textarea
+            aria-label="投稿内容"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             maxLength={1000}
@@ -186,11 +187,12 @@ function FeedPageInner() {
           {attachedTrack ? (
             <div className="mt-2 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs">
               <span>♪ {attachedTrack.title} ・ {attachedTrack.artists?.name}</span>
-              <button type="button" onClick={() => setAttachedTrack(null)} className="text-[var(--faint)] hover:text-[var(--text)]">✕</button>
+              <button type="button" onClick={() => setAttachedTrack(null)} aria-label="添付した楽曲を外す" className="text-[var(--faint)] hover:text-[var(--text)]">✕</button>
             </div>
           ) : (
             <div className="mt-2">
               <input
+                aria-label="投稿に添付する楽曲を検索"
                 value={trackQuery}
                 onChange={(e) => setTrackQuery(e.target.value)}
                 placeholder="曲を検索して貼付…"
@@ -242,6 +244,7 @@ function FeedPageInner() {
                   </p>
                   <button
                     onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}
+                    aria-label="投稿メニューを開く"
                     className="text-[var(--faint)] hover:text-[var(--text)]"
                   >
                     ⋯
@@ -279,6 +282,7 @@ function FeedPageInner() {
                     ))}
                     <div className="flex gap-2">
                       <input
+                        aria-label="コメント本文"
                         value={commentBody}
                         onChange={(e) => setCommentBody(e.target.value)}
                         maxLength={500}

@@ -70,6 +70,7 @@ function Toggle({ id, value, onChange }: { id: string; value: boolean; onChange:
 function Select({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
   return (
     <select
+      aria-label="設定値を選択"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="text-[13px] px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-white cursor-pointer min-w-[130px] shrink-0"
