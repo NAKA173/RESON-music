@@ -1,0 +1,51 @@
+name: Storybook
+
+on:
+  pull_request:
+  push:
+    branches:
+      - claude/new-session-b6um0m
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storybook-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Storybook
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Install Storybook dependencies
+        working-directory: storybook
+        run: npm install --no-audit --no-fund
+
+      - name: Build Storybook
+        working-directory: storybook
+        run: npm run build
+
+      - name: Upload static Storybook
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: storybook/storybook-static/
+          if-no-files-found: error
+          retention-days: 7

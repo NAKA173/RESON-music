@@ -1,0 +1,15 @@
+{
+  "name": "reson-music-storybook",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6006 -c .storybook",
+    "build": "storybook build -c .storybook -o storybook-static"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "10.6.0",
+    "@storybook/nextjs-vite": "10.6.0",
+    "storybook": "10.6.0"
+  }
+}
