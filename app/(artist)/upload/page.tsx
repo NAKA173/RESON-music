@@ -332,7 +332,9 @@ export default function UploadPage() {
           >
             <input
               ref={fileInputRef}
+              id="track-audio-file"
               type="file"
+              aria-label="楽曲ファイル"
               accept={ALLOWED_TYPES.join(',')}
               className="hidden"
               onChange={onFileChange}
@@ -352,8 +354,9 @@ export default function UploadPage() {
 
           {/* タイトル */}
           <div>
-            <label className="block text-sm text-zinc-400 mb-1">タイトル <span className="text-red-400">*</span></label>
+            <label htmlFor="track-title" className="block text-sm text-zinc-400 mb-1">タイトル <span className="text-red-400">*</span></label>
             <input
+              id="track-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -365,8 +368,9 @@ export default function UploadPage() {
 
           {/* ISRC */}
           <div>
-            <label className="block text-sm text-zinc-400 mb-1">ISRC（任意）</label>
+            <label htmlFor="track-isrc" className="block text-sm text-zinc-400 mb-1">ISRC（任意）</label>
             <input
+              id="track-isrc"
               type="text"
               value={isrc}
               onChange={(e) => setIsrc(e.target.value)}
@@ -409,8 +413,9 @@ export default function UploadPage() {
 
           {/* アルバム */}
           <div>
-            <label className="block text-sm text-zinc-400 mb-2">アルバム（任意）</label>
+            <label htmlFor="track-album" className="block text-sm text-zinc-400 mb-2">アルバム（任意）</label>
             <select
+              id="track-album"
               value={albumId}
               onChange={(e) => {
                 setAlbumId(e.target.value)
@@ -427,8 +432,9 @@ export default function UploadPage() {
             </select>
             {albumId && (
               <div className="mt-2">
-                <label className="block text-xs text-zinc-500 mb-1">アルバム内の曲順（任意）</label>
+                <label htmlFor="track-number" className="block text-xs text-zinc-500 mb-1">アルバム内の曲順（任意）</label>
                 <input
+                  id="track-number"
                   type="number"
                   min={1}
                   value={trackNumber}
@@ -448,6 +454,7 @@ export default function UploadPage() {
                   <input
                     ref={albumCoverInputRef}
                     type="file"
+                    aria-label="アルバムジャケット画像"
                     accept={ALLOWED_IMAGE_TYPES.join(',')}
                     className="hidden"
                     onChange={onAlbumCoverChange}
@@ -472,6 +479,7 @@ export default function UploadPage() {
                 className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
               />
               <select
+                aria-label="新しいアルバムのリリース種別"
                 value={newAlbumReleaseType}
                 onChange={(e) => setNewAlbumReleaseType(e.target.value as 'single' | 'ep' | 'album')}
                 className="bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:border-zinc-400"
@@ -505,6 +513,7 @@ export default function UploadPage() {
                 <input
                   ref={coverInputRef}
                   type="file"
+                  aria-label="楽曲ジャケット画像"
                   accept={ALLOWED_IMAGE_TYPES.join(',')}
                   className="hidden"
                   onChange={onCoverChange}

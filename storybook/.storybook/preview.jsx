@@ -53,4 +53,7 @@ export const parameters = {
   a11y: {
     test: 'error',
   },
+  nextjs: {
+    appDirectory: true,
+  },
 }

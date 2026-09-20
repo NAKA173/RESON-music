@@ -50,8 +50,9 @@ export default function LoginPage() {
 
         <form onSubmit={login} className="space-y-4">
           <div>
-            <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
+            <label htmlFor="login-email" className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
             <input
+              id="login-email"
               type="email"
               placeholder="you@example.com"
               value={email}
@@ -61,8 +62,9 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-zinc-400 mb-1">パスワード</label>
+            <label htmlFor="login-password" className="block text-sm text-zinc-400 mb-1">パスワード</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

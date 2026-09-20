@@ -167,8 +167,9 @@ export default function RegisterPage() {
         {step === 'account' && (
           <form onSubmit={createAccount} className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
+              <label htmlFor="register-email" className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
               <input
+                id="register-email"
                 type="email"
                 autoComplete="email"
                 placeholder="you@example.com"
@@ -179,8 +180,9 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">パスワード</label>
+              <label htmlFor="register-password" className="block text-sm text-zinc-400 mb-1">パスワード</label>
               <input
+                id="register-password"
                 type="password"
                 autoComplete="new-password"
                 value={password}
@@ -192,8 +194,9 @@ export default function RegisterPage() {
               <p className="mt-1 text-xs text-zinc-600">8文字以上</p>
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">パスワード（確認）</label>
+              <label htmlFor="register-password-confirm" className="block text-sm text-zinc-400 mb-1">パスワード（確認）</label>
               <input
+                id="register-password-confirm"
                 type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
@@ -263,8 +266,9 @@ export default function RegisterPage() {
         {step === 'artist' && (
           <form onSubmit={nextFromArtist} className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">アーティスト名 <span className="text-red-400">*</span></label>
+              <label htmlFor="artist-name" className="block text-sm text-zinc-400 mb-1">アーティスト名 <span className="text-red-400">*</span></label>
               <input
+                id="artist-name"
                 type="text"
                 placeholder="あなたの名前・グループ名"
                 value={name}
@@ -275,8 +279,9 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">自己紹介（任意）</label>
+              <label htmlFor="artist-bio" className="block text-sm text-zinc-400 mb-1">自己紹介（任意）</label>
               <textarea
+                id="artist-bio"
                 placeholder="どんな音楽を作っているか、活動拠点など"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
@@ -301,8 +306,9 @@ export default function RegisterPage() {
               分配金・出金の受け取り先として使用します。口座名義は登録者本人の氏名と一致させてください。
             </p>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">銀行名 <span className="text-red-400">*</span></label>
+              <label htmlFor="bank-name" className="block text-sm text-zinc-400 mb-1">銀行名 <span className="text-red-400">*</span></label>
               <input
+                id="bank-name"
                 type="text"
                 value={bankName}
                 onChange={(e) => setBankName(e.target.value)}
@@ -311,8 +317,9 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">支店名 <span className="text-red-400">*</span></label>
+              <label htmlFor="branch-name" className="block text-sm text-zinc-400 mb-1">支店名 <span className="text-red-400">*</span></label>
               <input
+                id="branch-name"
                 type="text"
                 value={branchName}
                 onChange={(e) => setBranchName(e.target.value)}
@@ -321,8 +328,9 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">口座種別 <span className="text-red-400">*</span></label>
+              <label htmlFor="account-type" className="block text-sm text-zinc-400 mb-1">口座種別 <span className="text-red-400">*</span></label>
               <select
+                id="account-type"
                 value={accountType}
                 onChange={(e) => setAccountType(e.target.value as 'ordinary' | 'checking')}
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
@@ -332,8 +340,9 @@ export default function RegisterPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">口座番号 <span className="text-red-400">*</span></label>
+              <label htmlFor="account-number" className="block text-sm text-zinc-400 mb-1">口座番号 <span className="text-red-400">*</span></label>
               <input
+                id="account-number"
                 type="text"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
@@ -342,8 +351,9 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">口座名義（カナ） <span className="text-red-400">*</span></label>
+              <label htmlFor="account-holder-name" className="block text-sm text-zinc-400 mb-1">口座名義（カナ） <span className="text-red-400">*</span></label>
               <input
+                id="account-holder-name"
                 type="text"
                 placeholder="例: ヤマダ タロウ"
                 value={accountHolderName}
