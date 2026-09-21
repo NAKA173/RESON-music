@@ -305,19 +305,19 @@ export default function UploadPage() {
         </div>
 
         {error && (
-          <p className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
+          <p role="alert" aria-live="assertive" className="text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
             {error}
           </p>
         )}
 
         {aiWarning && (
-          <p className="text-sm text-yellow-400 bg-yellow-900/20 border border-yellow-800 rounded-lg px-4 py-3">
+          <p role="status" aria-live="polite" className="text-sm text-yellow-400 bg-yellow-900/20 border border-yellow-800 rounded-lg px-4 py-3">
             ⚠️ {aiWarning}
           </p>
         )}
 
         {duplicateWarning && (
-          <p className="text-sm text-orange-400 bg-orange-900/20 border border-orange-800 rounded-lg px-4 py-3">
+          <p role="status" aria-live="polite" className="text-sm text-orange-400 bg-orange-900/20 border border-orange-800 rounded-lg px-4 py-3">
             ⚠️ {duplicateWarning}
           </p>
         )}

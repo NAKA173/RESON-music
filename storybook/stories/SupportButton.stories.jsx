@@ -30,6 +30,34 @@ export const TipDialog = {
   },
 }
 
+export const FocusTrap = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /投げ銭/ }))
+    const closeButton = canvas.getByRole('button', { name: '投げ銭ダイアログを閉じる' })
+    const sendButton = canvas.getByRole('button', { name: '¥100 を送る' })
+    await expect(closeButton).toHaveFocus()
+    await userEvent.tab({ shift: true })
+    await expect(sendButton).toHaveFocus()
+    await userEvent.tab()
+    await expect(closeButton).toHaveFocus()
+  },
+}
+
+export const BackdropDismissRestoresFocus = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const trigger = canvas.getByRole('button', { name: /投げ銭/ })
+    await userEvent.click(trigger)
+    const dialog = canvas.getByRole('dialog')
+    const backdrop = dialog.parentElement
+    await expect(backdrop).not.toBeNull()
+    await userEvent.click(backdrop)
+    await expect(canvas.queryByRole('dialog')).not.toBeInTheDocument()
+    await expect(trigger).toHaveFocus()
+  },
+}
+
 export const KeyboardDismiss = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -38,6 +66,7 @@ export const KeyboardDismiss = {
     await expect(closeButton).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     await expect(canvas.queryByRole('dialog')).not.toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: /投げ銭/ })).toHaveFocus()
   },
 }
 

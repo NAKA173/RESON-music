@@ -411,6 +411,7 @@ export default function RegisterPage() {
               <div className="space-y-2 pl-8">
                 <input
                   type="text"
+                  aria-label="保護者の氏名"
                   placeholder="保護者の氏名"
                   value={parentConsentName}
                   onChange={(e) => setParentConsentName(e.target.value)}
@@ -418,6 +419,7 @@ export default function RegisterPage() {
                 />
                 <input
                   type="text"
+                  aria-label="保護者の連絡先"
                   placeholder="保護者の連絡先（電話番号 or メールアドレス）"
                   value={parentConsentContact}
                   onChange={(e) => setParentConsentContact(e.target.value)}
