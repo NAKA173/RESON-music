@@ -151,15 +151,15 @@ export default function PlayerPage() {
       </aside>
 
       {/* メイン */}
-      <main className="flex-1 px-4 pb-24 pt-6 sm:px-8">
+      <main className="min-w-0 flex-1 px-4 pb-24 pt-6 sm:px-8">
         <div className="mx-auto max-w-5xl space-y-10">
           {/* トップバー */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-4">
             <input
               disabled
               aria-label="アーティスト・楽曲・気分で探す"
               placeholder="アーティスト・楽曲・気分で探す"
-              className="flex-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--faint)]"
+              className="w-full min-w-0 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--faint)] sm:w-auto sm:flex-1"
             />
             <Link href="/pricing" className="text-sm text-[var(--dim)] hover:text-[var(--text)]">
               料金
@@ -369,12 +369,12 @@ export default function PlayerPage() {
       </main>
 
       {/* モバイルボトムナビ */}
-      <nav aria-label="モバイルナビゲーション" className="fixed inset-x-0 bottom-0 z-50 flex border-t border-[var(--line)] bg-[var(--panel)] sm:hidden">
+      <nav aria-label="モバイルナビゲーション" className="fixed inset-x-0 bottom-0 z-50 flex max-w-full overflow-x-auto overscroll-x-contain border-t border-[var(--line)] bg-[var(--panel)] sm:hidden">
         {navItems.map((n) => (
           <Link
             key={n.href}
             href={n.href}
-            className="flex flex-1 flex-col items-center gap-1 py-3 text-xs text-[var(--dim)]"
+            className="flex min-w-16 flex-none flex-col items-center gap-1 px-2 py-3 text-xs text-[var(--dim)]"
           >
             <span>{n.icon}</span>
             {n.label}

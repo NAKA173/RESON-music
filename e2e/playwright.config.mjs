@@ -74,6 +74,15 @@ export default defineConfig({
         storageState: './.auth/artist.json',
       },
     },
+    {
+      name: 'visual-mobile-chromium',
+      testMatch: /visual-smoke\.spec\.mjs/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['Pixel 5'],
+        storageState: './.auth/artist.json',
+      },
+    },
     ...crossBrowserProjects,
   ],
   webServer: {

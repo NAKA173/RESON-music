@@ -69,7 +69,30 @@ export const StudentVerificationError = {
     await userEvent.click(canvas.getByRole('button', { name: 'Student に登録' }))
     await userEvent.type(canvas.getByLabelText('学校発行のメールアドレス'), 'student@example.com')
     await userEvent.click(canvas.getByRole('button', { name: '認証コードを送信' }))
-    await expect(canvas.getByText('.ed.jp の学校メールを入力してください')).toBeVisible()
+    await expect(canvas.getByRole('alert')).toHaveTextContent('.ed.jp の学校メールを入力してください')
+  },
+}
+
+export const StudentCodeRequiresSixDigits = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Student に登録' }))
+    await userEvent.type(canvas.getByLabelText('学校発行のメールアドレス'), 'student@school.ed.jp')
+    await userEvent.click(canvas.getByRole('button', { name: '認証コードを送信' }))
+
+    const code = await canvas.findByLabelText('Student認証コード')
+    const confirm = canvas.getByRole('button', { name: '確認して登録へ進む' })
+
+    await userEvent.type(code, '12a34')
+    await expect(code).toHaveValue('1234')
+    await expect(confirm).toBeDisabled()
+
+    await userEvent.type(code, '56')
+    await expect(code).toHaveValue('123456')
+    await expect(confirm).toBeEnabled()
+
+    await userEvent.type(code, '789')
+    await expect(code).toHaveValue('123456')
   },
 }
 
@@ -81,5 +104,7 @@ export const MobileStudentVerification = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Student に登録' }))
     await expect(canvas.getByText('Studentプラン認証')).toBeVisible()
+    const doc = canvasElement.ownerDocument
+    await expect(doc.documentElement.scrollWidth).toBeLessThanOrEqual(doc.documentElement.clientWidth)
   },
 }

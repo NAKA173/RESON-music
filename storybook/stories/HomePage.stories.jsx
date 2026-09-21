@@ -1,4 +1,5 @@
 import React from 'react'
+import { expect } from 'storybook/test'
 import HomePage from '../../app/(player)/home/page'
 
 const tracks = [
@@ -63,5 +64,9 @@ export const MobilePopulated = {
   },
   parameters: {
     mockApi: populatedMocks,
+  },
+  play: async ({ canvasElement }) => {
+    const doc = canvasElement.ownerDocument
+    await expect(doc.documentElement.scrollWidth).toBeLessThanOrEqual(doc.documentElement.clientWidth)
   },
 }

@@ -75,7 +75,22 @@ export const SubmitFailure = {
   },
 }
 
-export const Mobile = {
+export const DetailsMaxLength = {
+  parameters: {
+    mockApi: {
+      'GET /api/privacy/requests': { body: { requests: [] } },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const details = await canvas.findByLabelText('詳細・対象データ（任意）')
+    await userEvent.type(details, 'x'.repeat(2001))
+    await expect(details.value).toHaveLength(2000)
+    await expect(canvas.getByText('2000/2000')).toBeVisible()
+  },
+}
+
+export const MobileNoHorizontalOverflow = {
   globals: {
     viewport: { value: 'mobile1', isRotated: false },
   },
@@ -83,5 +98,11 @@ export const Mobile = {
     mockApi: {
       'GET /api/privacy/requests': { body: { requests: [] } },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByLabelText('請求の種類')).toBeVisible()
+    const doc = canvasElement.ownerDocument
+    await expect(doc.documentElement.scrollWidth).toBeLessThanOrEqual(doc.documentElement.clientWidth)
   },
 }

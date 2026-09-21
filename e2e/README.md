@@ -50,6 +50,7 @@ supabase stop
 - `public-chromium`: landing, login, register, privacy, navigation, and middleware security headers
 - `setup`: creates an isolated development artist account through the development-only seed endpoint, signs in, and saves browser authentication state
 - `authenticated-chromium`: reuses that `storageState` for private routes and critical browser flows
+- `visual-mobile-chromium`: runs selected private routes at a Pixel 5 viewport, fails on horizontal page overflow, and captures full-page reference screenshots
 - scheduled-only critical projects: Desktop Firefox, Desktop Safari/WebKit, and iPhone 12/WebKit emulation
 
 The seed endpoint remains disabled unless both development mode and `ENABLE_DEV_SEED_ACCOUNT=true` are active. CI uses only the local Supabase service-role key.
@@ -65,6 +66,8 @@ The critical-flow suite covers:
 - upload file-type validation
 - album creation from the upload screen
 - a valid WAV upload through a mocked signed upload URL, mocked R2 PUT, AI check, and fingerprint endpoint
+
+Visual smoke screenshots are uploaded by CI as a 14-day artifact. They provide reviewable visual baselines; automated pixel-diff gating can be layered on later once stable baselines are committed.
 
 Stripe and Cloudflare R2 are never contacted by these tests. The browser requests are intercepted at the network boundary and their payloads are asserted. The actual WAV decode/upload browser path is kept on Chromium; the surrounding critical UI flows run in the scheduled Firefox/WebKit projects.
 
