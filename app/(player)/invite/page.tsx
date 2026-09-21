@@ -62,6 +62,7 @@ export default function InvitePage() {
               <div className="mt-2 flex items-center gap-2">
                 <input
                   readOnly
+                  aria-label="あなたの招待リンク"
                   value={inviteLink}
                   className="flex-1 truncate rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)]"
                 />

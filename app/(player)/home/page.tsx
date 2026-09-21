@@ -99,7 +99,7 @@ export default function PlayerPage() {
         <Link href="/" className="font-display text-xl font-bold">
           RESON
         </Link>
-        <nav className="mt-8 flex flex-col gap-1">
+        <nav aria-label="メインナビゲーション" className="mt-8 flex flex-col gap-1">
           {navItems.map((n) => (
             <Link
               key={n.href}
@@ -157,6 +157,7 @@ export default function PlayerPage() {
           <div className="flex items-center gap-4">
             <input
               disabled
+              aria-label="アーティスト・楽曲・気分で探す"
               placeholder="アーティスト・楽曲・気分で探す"
               className="flex-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--faint)]"
             />
@@ -368,7 +369,7 @@ export default function PlayerPage() {
       </main>
 
       {/* モバイルボトムナビ */}
-      <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-[var(--line)] bg-[var(--panel)] sm:hidden">
+      <nav aria-label="モバイルナビゲーション" className="fixed inset-x-0 bottom-0 z-50 flex border-t border-[var(--line)] bg-[var(--panel)] sm:hidden">
         {navItems.map((n) => (
           <Link
             key={n.href}
