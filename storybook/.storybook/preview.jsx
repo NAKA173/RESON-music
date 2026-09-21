@@ -1,4 +1,5 @@
 import React from 'react'
+import { MINIMAL_VIEWPORTS } from 'storybook/viewport'
 import '../../app/globals.css'
 
 const originalFetch = globalThis.fetch?.bind(globalThis)
@@ -55,5 +56,8 @@ export const parameters = {
   },
   nextjs: {
     appDirectory: true,
+  },
+  viewport: {
+    options: MINIMAL_VIEWPORTS,
   },
 }

@@ -50,6 +50,36 @@ export const StudentVerification = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Student に登録' }))
     await expect(canvas.getByText('Studentプラン認証')).toBeVisible()
-    await expect(canvas.getByPlaceholderText('example@school.ed.jp')).toBeVisible()
+    await expect(canvas.getByLabelText('学校発行のメールアドレス')).toBeVisible()
+  },
+}
+
+export const StudentVerificationError = {
+  parameters: {
+    mockApi: {
+      ...checkoutMocks,
+      'POST /api/student/verify/request': {
+        status: 400,
+        body: { error: '.ed.jp の学校メールを入力してください' },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Student に登録' }))
+    await userEvent.type(canvas.getByLabelText('学校発行のメールアドレス'), 'student@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: '認証コードを送信' }))
+    await expect(canvas.getByText('.ed.jp の学校メールを入力してください')).toBeVisible()
+  },
+}
+
+export const MobileStudentVerification = {
+  globals: {
+    viewport: { value: 'mobile1', isRotated: false },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Student に登録' }))
+    await expect(canvas.getByText('Studentプラン認証')).toBeVisible()
   },
 }

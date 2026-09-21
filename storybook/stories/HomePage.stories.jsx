@@ -14,6 +14,21 @@ const playerMocks = {
   'GET /api/tracks/home-track-1/lyrics': { body: { lyrics: null } },
 }
 
+const populatedMocks = {
+  ...playerMocks,
+  'GET /api/tracks/list': { body: { tracks } },
+  'GET /api/recommendations/heat': {
+    body: { tracks: [{ ...tracks[1], completion_rate: 0.76, support_rate: 0.23, heat_score: 0.81 }] },
+  },
+  'GET /api/recommendations/foryou': {
+    body: { tracks: [{ ...tracks[0], completion_rate: 0.84, support_rate: 0.29, heat_score: 0.88, because_you_like: true }] },
+  },
+  'GET /api/explore': {
+    body: { tracks: [{ id: 'explore-home-1', title: 'Hidden Gem', cumulative_plays: 420, artist: { id: 'artist-3', name: 'Hidden Artist' }, genres: ['Indie'] }] },
+  },
+  'GET /api/artist/status': { body: { has_artist: true } },
+}
+
 const meta = {
   title: 'Pages/Listener/Home',
   component: HomePage,
@@ -38,19 +53,15 @@ export const EmptyLibrary = {
 
 export const Populated = {
   parameters: {
-    mockApi: {
-      ...playerMocks,
-      'GET /api/tracks/list': { body: { tracks } },
-      'GET /api/recommendations/heat': {
-        body: { tracks: [{ ...tracks[1], completion_rate: 0.76, support_rate: 0.23, heat_score: 0.81 }] },
-      },
-      'GET /api/recommendations/foryou': {
-        body: { tracks: [{ ...tracks[0], completion_rate: 0.84, support_rate: 0.29, heat_score: 0.88, because_you_like: true }] },
-      },
-      'GET /api/explore': {
-        body: { tracks: [{ id: 'explore-home-1', title: 'Hidden Gem', cumulative_plays: 420, artist: { id: 'artist-3', name: 'Hidden Artist' }, genres: ['Indie'] }] },
-      },
-      'GET /api/artist/status': { body: { has_artist: true } },
-    },
+    mockApi: populatedMocks,
+  },
+}
+
+export const MobilePopulated = {
+  globals: {
+    viewport: { value: 'mobile2', isRotated: false },
+  },
+  parameters: {
+    mockApi: populatedMocks,
   },
 }

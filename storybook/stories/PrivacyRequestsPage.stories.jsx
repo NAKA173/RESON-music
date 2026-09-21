@@ -1,4 +1,5 @@
 import React from 'react'
+import { expect, userEvent, within } from 'storybook/test'
 import PrivacyRequestsPage from '../../app/(player)/privacy-requests/page'
 
 const meta = {
@@ -25,6 +26,62 @@ export const WithHistory = {
         ] },
       },
       'POST /api/privacy/requests': { body: { request: { id: 'pr-new', request_type: 'access', details: '', status: 'received', response: null, created_at: '2026-09-21T00:00:00.000Z', responded_at: null } } },
+    },
+  },
+}
+
+export const SubmitSuccess = {
+  parameters: {
+    mockApi: {
+      'GET /api/privacy/requests': { body: { requests: [] } },
+      'POST /api/privacy/requests': {
+        body: {
+          request: {
+            id: 'pr-new',
+            request_type: 'access',
+            details: '再生履歴を確認したい',
+            status: 'received',
+            response: null,
+            created_at: '2026-09-21T00:00:00.000Z',
+            responded_at: null,
+          },
+        },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByLabelText('詳細・対象データ（任意）'), '再生履歴を確認したい')
+    await userEvent.click(canvas.getByRole('button', { name: '請求を送信する' }))
+    await expect(await canvas.findByRole('status')).toHaveTextContent('請求を受け付けました')
+    await expect(canvas.getByText('再生履歴を確認したい')).toBeVisible()
+  },
+}
+
+export const SubmitFailure = {
+  parameters: {
+    mockApi: {
+      'GET /api/privacy/requests': { body: { requests: [] } },
+      'POST /api/privacy/requests': {
+        status: 500,
+        body: { error: '請求を送信できませんでした' },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: '請求を送信する' }))
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('請求を送信できませんでした')
+  },
+}
+
+export const Mobile = {
+  globals: {
+    viewport: { value: 'mobile1', isRotated: false },
+  },
+  parameters: {
+    mockApi: {
+      'GET /api/privacy/requests': { body: { requests: [] } },
     },
   },
 }

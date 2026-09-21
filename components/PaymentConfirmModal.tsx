@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Elements,
   PaymentElement,
@@ -17,6 +17,14 @@ interface PaymentConfirmModalProps {
 }
 
 export function PaymentConfirmModal({ clientSecret, title, onSuccess, onClose }: PaymentConfirmModalProps) {
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
       <div
@@ -27,7 +35,7 @@ export function PaymentConfirmModal({ clientSecret, title, onSuccess, onClose }:
       >
         <div className="flex items-center justify-between">
           <h3 id="payment-confirm-title" className="text-sm font-semibold">{title}</h3>
-          <button onClick={onClose} aria-label="決済ダイアログを閉じる" className="text-zinc-500 hover:text-white">✕</button>
+          <button autoFocus onClick={onClose} aria-label="決済ダイアログを閉じる" className="text-zinc-500 hover:text-white">✕</button>
         </div>
         <Elements stripe={getStripeClient()} options={{ clientSecret }}>
           <ConfirmForm onSuccess={onSuccess} onClose={onClose} />

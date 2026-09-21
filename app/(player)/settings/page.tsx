@@ -48,13 +48,13 @@ const DEFAULTS: Settings = {
   listening_data_use: false,
 }
 
-function Toggle({ id, value, onChange }: { id: string; value: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ id, label, value, onChange }: { id: string; label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="shrink-0 mt-0.5">
       <button
         role="switch"
         aria-checked={value}
-        aria-label="設定を切り替える"
+        aria-label={`${label}を切り替える`}
         id={id}
         onClick={() => onChange(!value)}
         className={`relative w-10 h-[22px] rounded-full transition-colors ${value ? 'bg-white' : 'bg-zinc-600'}`}
@@ -67,10 +67,10 @@ function Toggle({ id, value, onChange }: { id: string; value: boolean; onChange:
   )
 }
 
-function Select({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
+function Select({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
   return (
     <select
-      aria-label="設定値を選択"
+      aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="text-[13px] px-2.5 py-1.5 rounded-lg border border-zinc-700 bg-zinc-900 text-white cursor-pointer min-w-[130px] shrink-0"
@@ -174,7 +174,7 @@ export default function SettingsPage() {
                 オンにすると、公開設定にかかわらずプロフィールと投稿を他の利用者から非表示にします。
               </p>
             </div>
-            <Toggle id="t-private" value={s.is_private} onChange={(v) => update({ is_private: v })} />
+            <Toggle id="t-private" label="非公開アカウント" value={s.is_private} onChange={(v) => update({ is_private: v })} />
           </div>
         </Section>
 
@@ -182,25 +182,25 @@ export default function SettingsPage() {
         <Section title="SNS機能">
           <Card>
             <Row label="プロフィールページ" desc="音楽趣味・好きなアーティスト・遍歴を公開する">
-              <Toggle id="t-profile" value={s.profile_public} onChange={(v) => update({ profile_public: v })} />
+              <Toggle id="t-profile" label="プロフィールページ" value={s.profile_public} onChange={(v) => update({ profile_public: v })} />
             </Row>
             <Row label="音楽タイムライン（投稿）" desc="楽曲投稿・アルバムレビュー・音楽日記・プレイリスト共有">
-              <Toggle id="t-feed" value={s.feed_enabled} onChange={(v) => update({ feed_enabled: v })} />
+              <Toggle id="t-feed" label="音楽タイムライン" value={s.feed_enabled} onChange={(v) => update({ feed_enabled: v })} />
             </Row>
             <Row label="フォロー機能" desc="ユーザー・アーティスト・プレイリスト制作者をフォローできる">
-              <Toggle id="t-follow" value={s.follow_enabled} onChange={(v) => update({ follow_enabled: v })} />
+              <Toggle id="t-follow" label="フォロー機能" value={s.follow_enabled} onChange={(v) => update({ follow_enabled: v })} />
             </Row>
             <Row label="音楽マッチング" desc="趣味が近いユーザーを発見・共通アーティスト表示">
-              <Toggle id="t-match" value={s.matching_enabled} onChange={(v) => update({ matching_enabled: v })} />
+              <Toggle id="t-match" label="音楽マッチング" value={s.matching_enabled} onChange={(v) => update({ matching_enabled: v })} />
             </Row>
             <Row label="コメント・レビュー" desc="楽曲・アルバムへの感想・時間指定・考察コメント">
-              <Toggle id="t-comment" value={s.comment_enabled} onChange={(v) => update({ comment_enabled: v })} />
+              <Toggle id="t-comment" label="コメント・レビュー" value={s.comment_enabled} onChange={(v) => update({ comment_enabled: v })} />
             </Row>
             <Row label="コミュニティ参加" desc="ジャンル別コミュニティへの投稿・参加">
-              <Toggle id="t-community" value={s.community_enabled} onChange={(v) => update({ community_enabled: v })} />
+              <Toggle id="t-community" label="コミュニティ参加" value={s.community_enabled} onChange={(v) => update({ community_enabled: v })} />
             </Row>
             <Row label="音楽コレクション" desc="人生アルバム・年間ベストなどを公開する" last>
-              <Toggle id="t-collection" value={s.collection_public} onChange={(v) => update({ collection_public: v })} />
+              <Toggle id="t-collection" label="音楽コレクション" value={s.collection_public} onChange={(v) => update({ collection_public: v })} />
             </Row>
           </Card>
         </Section>
@@ -210,6 +210,7 @@ export default function SettingsPage() {
           <Card>
             <Row label="フォローリクエスト" desc="誰からのフォローリクエストを受け取るか" disabled={!s.follow_enabled}>
               <Select
+                label="フォローリクエストの受信範囲"
                 value={s.follow_request_from}
                 options={['全員', '相互フォロー', '誰も受け取らない']}
                 onChange={(v) => update({ follow_request_from: v })}
@@ -217,6 +218,7 @@ export default function SettingsPage() {
             </Row>
             <Row label="ダイレクトメッセージ" desc="誰からのDMを受け取るか">
               <Select
+                label="ダイレクトメッセージの受信範囲"
                 value={s.dm_from}
                 options={['全員', 'フォロワーのみ', '受け取らない']}
                 onChange={(v) => update({ dm_from: v })}
@@ -224,6 +226,7 @@ export default function SettingsPage() {
             </Row>
             <Row label="コメント通知" desc="自分の投稿へのコメント通知" disabled={!s.comment_enabled}>
               <Select
+                label="コメント通知の受信範囲"
                 value={s.comment_notif_from}
                 options={['全員', 'フォロワーのみ', '受け取らない']}
                 onChange={(v) => update({ comment_notif_from: v })}
@@ -231,6 +234,7 @@ export default function SettingsPage() {
             </Row>
             <Row label="いいね・応援の通知">
               <Select
+                label="いいね・応援の通知"
                 value={s.like_notif ? 'オン' : 'オフ'}
                 options={['オン', 'オフ']}
                 onChange={(v) => update({ like_notif: v === 'オン' })}
@@ -238,6 +242,7 @@ export default function SettingsPage() {
             </Row>
             <Row label="マッチング提案" desc="「音楽相性が近い人」のサジェスト通知">
               <Select
+                label="マッチング提案"
                 value={s.matching_suggestion ? '受け取る' : '受け取らない'}
                 options={['受け取る', '受け取らない']}
                 onChange={(v) => update({ matching_suggestion: v === '受け取る' })}
@@ -245,6 +250,7 @@ export default function SettingsPage() {
             </Row>
             <Row label="アーティストの新着情報" desc="フォロー中アーティストの投稿・イベント通知" last>
               <Select
+                label="アーティストの新着情報"
                 value={s.artist_news}
                 options={['全て通知', '重要のみ', '受け取らない']}
                 onChange={(v) => update({ artist_news: v })}
@@ -257,13 +263,13 @@ export default function SettingsPage() {
         <Section title="支援・クラファン機能">
           <Card>
             <Row label="応援・支援履歴の公開" desc="支援したプロジェクト・アーティストをプロフィールに表示">
-              <Toggle id="t-support-hist" value={s.support_history_public} onChange={(v) => update({ support_history_public: v })} />
+              <Toggle id="t-support-hist" label="応援・支援履歴の公開" value={s.support_history_public} onChange={(v) => update({ support_history_public: v })} />
             </Row>
             <Row label="限定コンテンツの受信" desc="支援者向けデモ音源・未公開曲・制作メモ">
-              <Toggle id="t-exclusive" value={s.exclusive_content} onChange={(v) => update({ exclusive_content: v })} />
+              <Toggle id="t-exclusive" label="限定コンテンツの受信" value={s.exclusive_content} onChange={(v) => update({ exclusive_content: v })} />
             </Row>
             <Row label="支援者コミュニティ参加" desc="プロジェクトごとの支援者タブへの参加" last>
-              <Toggle id="t-backer" value={s.backer_community} onChange={(v) => update({ backer_community: v })} />
+              <Toggle id="t-backer" label="支援者コミュニティ参加" value={s.backer_community} onChange={(v) => update({ backer_community: v })} />
             </Row>
           </Card>
         </Section>
@@ -272,10 +278,10 @@ export default function SettingsPage() {
         <Section title="データ・評価">
           <Card>
             <Row label="信頼度スコアの公開" desc="新人発見数・レビュー評価などの指標を表示">
-              <Toggle id="t-score" value={s.score_public} onChange={(v) => update({ score_public: v })} />
+              <Toggle id="t-score" label="信頼度スコアの公開" value={s.score_public} onChange={(v) => update({ score_public: v })} />
             </Row>
             <Row label="リスニングデータの利用" desc="オンにした場合のみ、聴取履歴をおすすめと音楽人格タグの提案に利用します。いつでもオフにできます。再生・分配に必要な記録は継続します。" last>
-              <Toggle id="t-listen" value={s.listening_data_use} onChange={(v) => update({ listening_data_use: v })} />
+              <Toggle id="t-listen" label="リスニングデータの利用" value={s.listening_data_use} onChange={(v) => update({ listening_data_use: v })} />
             </Row>
           </Card>
         </Section>

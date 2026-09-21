@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PaymentConfirmModal } from './PaymentConfirmModal'
 
 const TIP_PRESETS = [100, 300, 500, 1000]
@@ -13,6 +13,15 @@ export function SupportButton({ trackId }: { trackId: string }) {
   const [loading, setLoading] = useState(false)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [tipSent, setTipSent] = useState(false)
+
+  useEffect(() => {
+    if (!showTipForm) return
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowTipForm(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [showTipForm])
 
   async function sendHeart() {
     setError('')
@@ -87,6 +96,7 @@ export function SupportButton({ trackId }: { trackId: string }) {
             <div className="flex items-center justify-between">
               <h3 id="support-tip-title" className="text-sm font-semibold">投げ銭する</h3>
               <button
+                autoFocus
                 onClick={() => setShowTipForm(false)}
                 aria-label="投げ銭ダイアログを閉じる"
                 className="text-zinc-500 hover:text-white"

@@ -30,6 +30,34 @@ export const TipDialog = {
   },
 }
 
+export const KeyboardDismiss = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /投げ銭/ }))
+    const closeButton = canvas.getByRole('button', { name: '投げ銭ダイアログを閉じる' })
+    await expect(closeButton).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    await expect(canvas.queryByRole('dialog')).not.toBeInTheDocument()
+  },
+}
+
+export const DeferredTipSuccess = {
+  parameters: {
+    mockApi: {
+      'POST /api/supports': {
+        body: { ok: true, type: 'tip_deferred' },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /投げ銭/ }))
+    await userEvent.click(canvas.getByRole('button', { name: '¥300' }))
+    await userEvent.click(canvas.getByRole('button', { name: '¥300 を送る' }))
+    await expect(canvas.getByRole('button', { name: /送りました/ })).toBeVisible()
+  },
+}
+
 export const ApiError = {
   parameters: {
     mockApi: {
@@ -38,5 +66,10 @@ export const ApiError = {
         body: { error: '応援の記録に失敗しました' },
       },
     },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: /応援$/ }))
+    await expect(canvas.getByText('応援の記録に失敗しました')).toBeVisible()
   },
 }

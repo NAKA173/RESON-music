@@ -187,6 +187,7 @@ function PricingContent() {
               <>
                 <input
                   type="email"
+                  aria-label="学校発行のメールアドレス"
                   placeholder="example@school.ed.jp"
                   value={schoolEmail}
                   onChange={(e) => setSchoolEmail(e.target.value)}
@@ -205,6 +206,7 @@ function PricingContent() {
               <>
                 <input
                   type="text"
+                  aria-label="Student認証コード"
                   placeholder="6桁のコード"
                   value={verifyCode}
                   onChange={(e) => setVerifyCode(e.target.value)}

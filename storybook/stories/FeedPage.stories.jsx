@@ -58,3 +58,32 @@ export const WithPostAndComments = {
     await expect(canvas.getByLabelText('コメント本文')).toBeVisible()
   },
 }
+
+export const PostFailure = {
+  parameters: {
+    mockApi: {
+      'GET /api/posts': { body: { posts: [] } },
+      'POST /api/posts': {
+        status: 500,
+        body: { error: '投稿できませんでした' },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByLabelText('投稿内容'), '送信失敗を確認する投稿')
+    await userEvent.click(canvas.getByRole('button', { name: '投稿する' }))
+    await expect(canvas.getByText('投稿できませんでした')).toBeVisible()
+  },
+}
+
+export const MobileWithPost = {
+  globals: {
+    viewport: { value: 'mobile2', isRotated: false },
+  },
+  parameters: {
+    mockApi: {
+      'GET /api/posts': { body: { posts: [post] } },
+    },
+  },
+}
