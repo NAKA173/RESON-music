@@ -40,7 +40,15 @@ export default defineConfig({
   timeout: 30_000,
   expect: {
     timeout: 5_000,
+    toHaveScreenshot: {
+      pathTemplate: '{testDir}/../visual-baselines/{arg}{ext}',
+      animations: 'disabled',
+      caret: 'hide',
+      threshold: 0.2,
+      maxDiffPixelRatio: 0.005,
+    },
   },
+  updateSnapshots: 'none',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
@@ -71,6 +79,16 @@ export default defineConfig({
       dependencies: ['setup'],
       use: {
         ...desktopChrome,
+        storageState: './.auth/artist.json',
+      },
+    },
+    {
+      name: 'visual-mobile-chromium',
+      testMatch: /visual-smoke\.spec\.mjs/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['Pixel 5'],
+        deviceScaleFactor: 1,
         storageState: './.auth/artist.json',
       },
     },

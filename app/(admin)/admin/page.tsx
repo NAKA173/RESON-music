@@ -319,6 +319,7 @@ export default function AdminPage() {
             </p>
             <div className="flex gap-2">
               <input
+                aria-label="創設アーティストを検索"
                 value={foundingQuery}
                 onChange={(e) => setFoundingQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') searchFoundingArtists() }}

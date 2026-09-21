@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PaymentConfirmModal } from './PaymentConfirmModal'
 
 const TIP_PRESETS = [100, 300, 500, 1000]
@@ -13,6 +13,49 @@ export function SupportButton({ trackId }: { trackId: string }) {
   const [loading, setLoading] = useState(false)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [tipSent, setTipSent] = useState(false)
+  const tipTriggerRef = useRef<HTMLButtonElement>(null)
+  const tipDialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showTipForm) return
+
+    function closeTipDialog() {
+      setShowTipForm(false)
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeTipDialog()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const dialog = tipDialogRef.current
+      if (!dialog) return
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])'
+        )
+      )
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      tipTriggerRef.current?.focus()
+    }
+  }, [showTipForm])
 
   async function sendHeart() {
     setError('')
@@ -49,6 +92,7 @@ export function SupportButton({ trackId }: { trackId: string }) {
       setTimeout(() => setTipSent(false), 2000)
       return
     }
+    setShowTipForm(false)
     setClientSecret(data.client_secret)
   }
 
@@ -68,6 +112,7 @@ export function SupportButton({ trackId }: { trackId: string }) {
         ❤️ {hearted ? '応援しました' : '応援'}
       </button>
       <button
+        ref={tipTriggerRef}
         onClick={() => setShowTipForm((v) => !v)}
         title="投げ銭（最低100円）"
         className="flex items-center gap-1 rounded-full border border-zinc-700 px-3 py-1 text-xs hover:border-zinc-400"
@@ -77,11 +122,29 @@ export function SupportButton({ trackId }: { trackId: string }) {
       {error && <span className="text-xs text-red-400">{error}</span>}
 
       {showTipForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5 space-y-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setShowTipForm(false)
+          }}
+        >
+          <div
+            ref={tipDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="support-tip-title"
+            className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5 space-y-4"
+          >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">投げ銭する</h3>
-              <button onClick={() => setShowTipForm(false)} className="text-zinc-500 hover:text-white">✕</button>
+              <h3 id="support-tip-title" className="text-sm font-semibold">投げ銭する</h3>
+              <button
+                autoFocus
+                onClick={() => setShowTipForm(false)}
+                aria-label="投げ銭ダイアログを閉じる"
+                className="text-zinc-500 hover:text-white"
+              >
+                ✕
+              </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {TIP_PRESETS.map((amt) => (

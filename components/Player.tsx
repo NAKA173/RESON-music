@@ -232,6 +232,7 @@ export function Player({ track, onEnded, nextTrackId, controls }: PlayerProps) {
           max={duration}
           value={currentTime}
           onChange={seek}
+          aria-label="再生位置"
           className="w-full accent-white h-1"
         />
         <div className="flex justify-between text-xs text-zinc-500">

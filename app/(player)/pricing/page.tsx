@@ -187,6 +187,7 @@ function PricingContent() {
               <>
                 <input
                   type="email"
+                  aria-label="学校発行のメールアドレス"
                   placeholder="example@school.ed.jp"
                   value={schoolEmail}
                   onChange={(e) => setSchoolEmail(e.target.value)}
@@ -205,21 +206,25 @@ function PricingContent() {
               <>
                 <input
                   type="text"
+                  aria-label="Student認証コード"
                   placeholder="6桁のコード"
                   value={verifyCode}
-                  onChange={(e) => setVerifyCode(e.target.value)}
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm"
                 />
                 <button
                   onClick={confirmStudentCode}
-                  disabled={studentBusy || !verifyCode}
+                  disabled={studentBusy || verifyCode.length !== 6}
                   className="w-full rounded-lg py-2 text-sm font-semibold bg-white text-black disabled:opacity-50"
                 >
                   {studentBusy ? '確認中…' : '確認して登録へ進む'}
                 </button>
               </>
             )}
-            {studentError && <p className="text-xs text-red-400">{studentError}</p>}
+            {studentError && <p role="alert" aria-live="assertive" className="text-xs text-red-400">{studentError}</p>}
             <button onClick={() => setStudentStep('closed')} className="text-xs text-zinc-500 underline">
               キャンセル
             </button>

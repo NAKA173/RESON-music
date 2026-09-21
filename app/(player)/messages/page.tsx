@@ -134,6 +134,7 @@ function MessagesContent() {
           {/* 会話一覧 */}
           <div className="space-y-3">
             <input
+              aria-label="会話を始めるユーザーを検索"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ユーザーを検索して開始…"
@@ -202,12 +203,13 @@ function MessagesContent() {
                 {attachedTrack && (
                   <div className="mt-2 flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs">
                     <span>♪ {attachedTrack.title} ・ {attachedTrack.artists?.name}</span>
-                    <button onClick={() => setAttachedTrack(null)} className="text-[var(--faint)] hover:text-[var(--text)]">✕</button>
+                    <button onClick={() => setAttachedTrack(null)} aria-label="添付した楽曲を外す" className="text-[var(--faint)] hover:text-[var(--text)]">✕</button>
                   </div>
                 )}
                 {showTrackPicker && !attachedTrack && (
                   <div className="mt-2">
                     <input
+                      aria-label="メッセージに添付する楽曲を検索"
                       value={trackQuery}
                       onChange={(e) => setTrackQuery(e.target.value)}
                       placeholder="曲を検索して貼付…"
@@ -237,6 +239,7 @@ function MessagesContent() {
                     ♪
                   </button>
                   <input
+                    aria-label="メッセージ本文"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') send() }}

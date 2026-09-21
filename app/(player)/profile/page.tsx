@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [bio, setBio] = useState('')
   const [personaTags, setPersonaTags] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -34,21 +35,31 @@ export default function ProfilePage() {
   const [suggestedTags, setSuggestedTags] = useState<string[]>([])
 
   useEffect(() => {
-    fetch('/api/profile')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.profile) {
-          setDisplayName(d.profile.display_name ?? '')
-          setBio(d.profile.bio ?? '')
-          setPersonaTags((d.profile.persona_tags ?? []).join(', '))
-        }
-        setLoading(false)
-      })
+    loadProfile()
     loadBestTracks()
     fetch('/api/profile/suggested-tags')
       .then((r) => r.json())
       .then((d) => setSuggestedTags(d.suggested_tags ?? []))
   }, [])
+
+  async function loadProfile() {
+    setLoading(true)
+    setLoadError('')
+    try {
+      const response = await fetch('/api/profile')
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error ?? 'プロフィールを取得できませんでした')
+      if (data.profile) {
+        setDisplayName(data.profile.display_name ?? '')
+        setBio(data.profile.bio ?? '')
+        setPersonaTags((data.profile.persona_tags ?? []).join(', '))
+      }
+    } catch (cause) {
+      setLoadError(cause instanceof Error ? cause.message : 'プロフィールを取得できませんでした')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   function addSuggestedTag(tag: string) {
     const current = personaTags.split(',').map((t) => t.trim()).filter(Boolean)
@@ -117,9 +128,13 @@ export default function ProfilePage() {
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    setSaving(true)
     setSaved(false)
     const tags = personaTags.split(',').map((t) => t.trim()).filter(Boolean)
+    if (tags.length > 10) {
+      setError('音楽人格タグは10個までです')
+      return
+    }
+    setSaving(true)
     const res = await fetch('/api/profile', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -147,12 +162,20 @@ export default function ProfilePage() {
         </p>
 
         {loading ? (
-          <div className="py-20 text-center text-[var(--faint)]">読み込み中…</div>
+          <div role="status" aria-live="polite" className="py-20 text-center text-[var(--faint)]">読み込み中…</div>
+        ) : loadError ? (
+          <div className="mt-6 rounded-2xl border border-red-800 bg-red-900/20 p-4">
+            <p role="alert" className="text-sm text-red-300">{loadError}</p>
+            <button type="button" onClick={loadProfile} className="mt-3 text-sm underline">
+              再試行
+            </button>
+          </div>
         ) : (
           <form onSubmit={save} className="mt-6 space-y-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
             <div>
-              <label className="text-xs text-[var(--faint)]">表示名</label>
+              <label htmlFor="profile-display-name" className="text-xs text-[var(--faint)]">表示名</label>
               <input
+                id="profile-display-name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 maxLength={50}
@@ -160,8 +183,9 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="text-xs text-[var(--faint)]">自己紹介</label>
+              <label htmlFor="profile-bio" className="text-xs text-[var(--faint)]">自己紹介</label>
               <textarea
+                id="profile-bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 maxLength={280}
@@ -170,8 +194,9 @@ export default function ProfilePage() {
               />
             </div>
             <div>
-              <label className="text-xs text-[var(--faint)]">音楽人格タグ（カンマ区切り・最大10個）</label>
+              <label htmlFor="profile-persona-tags" className="text-xs text-[var(--faint)]">音楽人格タグ（カンマ区切り・最大10個）</label>
               <input
+                id="profile-persona-tags"
                 value={personaTags}
                 onChange={(e) => setPersonaTags(e.target.value)}
                 placeholder="例: シティポップ, 夜更かし, ギターロック"
@@ -195,8 +220,8 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            {error && <p className="text-xs text-red-400">{error}</p>}
-            {saved && <p className="text-xs text-[var(--accent)]">保存しました</p>}
+            {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+            {saved && <p role="status" className="text-xs text-[var(--accent)]">保存しました</p>}
             <button
               type="submit"
               disabled={saving}
@@ -214,6 +239,7 @@ export default function ProfilePage() {
 
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
           <input
+            aria-label="ベストトラックに追加する楽曲を検索"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="楽曲名で検索して追加…"

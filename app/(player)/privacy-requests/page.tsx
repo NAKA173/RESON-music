@@ -84,9 +84,13 @@ export default function PrivacyRequestsPage() {
           </select>
           <label className="block text-sm" htmlFor="privacy-request-details">詳細・対象データ（任意）</label>
           <textarea id="privacy-request-details" value={details} maxLength={2000}
+            aria-describedby="privacy-request-details-help privacy-request-details-count"
             onChange={(event) => setDetails(event.target.value)} rows={5}
             className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-3 text-white" />
-          <p className="text-xs text-zinc-500">パスワードや決済カード番号は入力しないでください。</p>
+          <div className="flex items-start justify-between gap-3 text-xs text-zinc-500">
+            <p id="privacy-request-details-help">パスワードや決済カード番号は入力しないでください。</p>
+            <p id="privacy-request-details-count" aria-live="polite" className="shrink-0">{details.length}/2000</p>
+          </div>
           {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
           {message && <p role="status" className="text-sm text-green-400">{message}</p>}
           <button type="submit" disabled={busy}
