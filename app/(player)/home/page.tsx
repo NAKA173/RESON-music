@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Player } from '@/components/Player'
 import { usePlayerQueue } from '@/lib/player/queue'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { formatTrackArtistLine, type TrackCredit } from '@/lib/music/credits'
 import Link from 'next/link'
 
 interface Track {
@@ -13,6 +14,7 @@ interface Track {
   ai_generated: boolean
   cumulative_plays: number
   artists: { id: string; name: string } | null
+  credits?: TrackCredit[]
 }
 
 interface HeatTrack extends Track {
@@ -345,7 +347,7 @@ export default function PlayerPage() {
                           {t.title}
                         </p>
                         <p className="truncate text-xs text-[var(--dim)]">
-                          {t.artists?.name ?? '不明'}
+                          {formatTrackArtistLine(t.artists?.name, t.credits)}
                           {t.ai_generated && <span className="ml-2 text-yellow-500">AI</span>}
                         </p>
                       </div>

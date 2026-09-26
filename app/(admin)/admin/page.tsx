@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { TRACK_CREDIT_ROLE_LABELS, type TrackCredit } from '@/lib/music/credits'
+import { CONTENT_CATEGORY_LABELS, RECORDING_TYPE_LABELS, type ContentCategory, type RecordingType } from '@/lib/music/metadata'
 
 type Tab = 'artists' | 'tracks' | 'fraud' | 'reports' | 'payouts' | 'founding'
 
@@ -18,6 +20,16 @@ interface PendingTrack {
   ai_generated: boolean
   created_at: string
   artists: { id: string; name: string } | null
+  recording_type: RecordingType
+  content_category: ContentCategory
+  source_title: string | null
+  source_artist_name: string | null
+  source_work_title: string | null
+  source_url: string | null
+  rights_status: string
+  rights_confirmed: boolean
+  rights_note: string | null
+  credits: TrackCredit[]
 }
 
 interface FraudFlag {
@@ -226,6 +238,24 @@ export default function AdminPage() {
                     <p className="text-xs text-zinc-500">{new Date(t.created_at).toLocaleDateString('ja-JP')}</p>
                   </div>
                   <p className="text-sm text-zinc-400">{t.artists?.name ?? '不明'}</p>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-400">{RECORDING_TYPE_LABELS[t.recording_type] ?? t.recording_type}</span>
+                    {t.content_category !== 'none' && <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-yellow-300">{CONTENT_CATEGORY_LABELS[t.content_category] ?? t.content_category}</span>}
+                    <span className={t.rights_confirmed ? 'text-emerald-400' : 'text-red-400'}>{t.rights_confirmed ? '権利確認済み' : '権利確認なし'}</span>
+                  </div>
+                  {(t.source_title || t.source_work_title || t.source_artist_name) && (
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-400">
+                      <p>参照元：{t.source_title ?? '未入力'}{t.source_artist_name ? ` ／ ${t.source_artist_name}` : ''}</p>
+                      {t.source_work_title && <p className="mt-1">作品：{t.source_work_title}</p>}
+                      {t.source_url && <p className="mt-1 break-all text-zinc-600">{t.source_url}</p>}
+                      {t.rights_note && <p className="mt-1">メモ：{t.rights_note}</p>}
+                    </div>
+                  )}
+                  {t.credits.length > 0 && (
+                    <p className="text-xs text-zinc-500">
+                      クレジット：{t.credits.map((credit) => `${TRACK_CREDIT_ROLE_LABELS[credit.role]} ${credit.display_name}`).join(' ／ ')}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <button onClick={() => reviewTrack(t.id, 'approved')} className="text-xs bg-white text-black px-3 py-1.5 rounded-lg font-semibold">承認</button>
                     <button onClick={() => reviewTrack(t.id, 'rejected')} className="text-xs border border-red-800 text-red-400 px-3 py-1.5 rounded-lg">却下</button>

@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Player } from '@/components/Player'
 import { usePlayerQueue } from '@/lib/player/queue'
+import type { TrackCredit } from '@/lib/music/credits'
+import { RECORDING_TYPE_LABELS, type RecordingType } from '@/lib/music/metadata'
 
 interface AlbumTrack {
   id: string
@@ -13,6 +15,10 @@ interface AlbumTrack {
   track_number: number | null
   cumulative_plays: number
   ai_generated: boolean
+  recording_type?: string
+  content_category?: string
+  artists: { id: string; name: string } | null
+  credits?: TrackCredit[]
 }
 
 interface AlbumDetail {
@@ -110,7 +116,8 @@ function AlbumDetailContent() {
               id: current.id,
               title: current.title,
               duration_sec: current.duration_sec,
-              artists: album.artists,
+              artists: current.artists ?? album.artists,
+              credits: current.credits,
             }}
             onEnded={queue.playNext}
             nextTrackId={nextTrackId}
@@ -142,6 +149,9 @@ function AlbumDetailContent() {
                   <span className={`truncate text-sm font-medium ${i === currentIdx ? 'text-[var(--accent)]' : ''}`}>
                     {t.title}
                     {t.ai_generated && <span className="ml-2 text-xs text-yellow-500">AI</span>}
+                    {t.recording_type && t.recording_type !== 'original' && (
+                      <span className="ml-2 text-xs text-[var(--accent)]">{RECORDING_TYPE_LABELS[t.recording_type as RecordingType] ?? t.recording_type}</span>
+                    )}
                   </span>
                 </div>
                 <span className="text-xs text-[var(--faint)] shrink-0 ml-3">

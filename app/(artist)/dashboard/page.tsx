@@ -2,6 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { TRACK_CREDIT_ROLE_LABELS, TRACK_CREDIT_ROLES, type TrackCredit, type TrackCreditRole } from '@/lib/music/credits'
+import {
+  CONTENT_CATEGORIES,
+  CONTENT_CATEGORY_LABELS,
+  RECORDING_TYPES,
+  RECORDING_TYPE_LABELS,
+  RIGHTS_STATUSES,
+  RIGHTS_STATUS_LABELS,
+  type ContentCategory,
+  type RecordingType,
+  type RightsStatus,
+} from '@/lib/music/metadata'
 
 interface Distribution {
   year_month: string
@@ -22,6 +34,29 @@ interface Track {
   ai_generated: boolean
   review_status: 'pending' | 'approved' | 'rejected'
   isrc: string | null
+  recording_type: RecordingType
+  content_category: ContentCategory
+  source_title: string | null
+  source_artist_name: string | null
+  source_work_title: string | null
+  source_url: string | null
+  rights_status: RightsStatus
+  rights_confirmed: boolean
+  rights_note: string | null
+  credits: TrackCredit[]
+}
+
+interface MetadataDraft {
+  recording_type: RecordingType
+  content_category: ContentCategory
+  source_title: string
+  source_artist_name: string
+  source_work_title: string
+  source_url: string
+  rights_status: RightsStatus
+  rights_confirmed: boolean
+  rights_note: string
+  credits: Array<{ artist_id: string | null; display_name: string; role: TrackCreditRole }>
 }
 
 interface ReportData {
@@ -70,6 +105,10 @@ export default function DashboardPage() {
   const [isrcDraft, setIsrcDraft] = useState('')
   const [isrcSaving, setIsrcSaving] = useState(false)
   const [isrcError, setIsrcError] = useState('')
+  const [metadataEditingId, setMetadataEditingId] = useState<string | null>(null)
+  const [metadataDraft, setMetadataDraft] = useState<MetadataDraft | null>(null)
+  const [metadataSaving, setMetadataSaving] = useState(false)
+  const [metadataError, setMetadataError] = useState('')
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null)
   const [editingBank, setEditingBank] = useState(false)
   const [bankForm, setBankForm] = useState<BankAccount>({
@@ -142,6 +181,52 @@ export default function DashboardPage() {
     }
     setIsrcEditingId(trackId)
     setIsrcDraft(currentIsrc ?? '')
+  }
+
+  function toggleMetadataEditor(track: Track) {
+    setMetadataError('')
+    if (metadataEditingId === track.id) {
+      setMetadataEditingId(null)
+      setMetadataDraft(null)
+      return
+    }
+    setMetadataEditingId(track.id)
+    setMetadataDraft({
+      recording_type: track.recording_type,
+      content_category: track.content_category,
+      source_title: track.source_title ?? '',
+      source_artist_name: track.source_artist_name ?? '',
+      source_work_title: track.source_work_title ?? '',
+      source_url: track.source_url ?? '',
+      rights_status: track.rights_status,
+      rights_confirmed: track.rights_confirmed,
+      rights_note: track.rights_note ?? '',
+      credits: track.credits.map((credit) => ({
+        artist_id: credit.artist_id ?? null,
+        display_name: credit.display_name,
+        role: credit.role,
+      })),
+    })
+  }
+
+  async function saveMetadata(trackId: string) {
+    if (!metadataDraft) return
+    setMetadataSaving(true)
+    setMetadataError('')
+    const res = await fetch(`/api/tracks/${trackId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metadataDraft),
+    })
+    const body = await res.json()
+    setMetadataSaving(false)
+    if (!res.ok) {
+      setMetadataError(body.error ?? 'メタデータを保存できませんでした')
+      return
+    }
+    setMetadataEditingId(null)
+    setMetadataDraft(null)
+    fetch('/api/artist/report').then((r) => r.json()).then((d) => setData(d))
   }
 
   async function saveIsrc(trackId: string) {
@@ -350,6 +435,8 @@ export default function DashboardPage() {
                   <div className="min-w-0">
                     <p className="truncate">{t.title}</p>
                     <div className="flex gap-2 mt-0.5">
+                      <span className="text-xs text-zinc-500">{RECORDING_TYPE_LABELS[t.recording_type]}</span>
+                      {t.content_category !== 'none' && <span className="text-xs text-zinc-500">{CONTENT_CATEGORY_LABELS[t.content_category]}</span>}
                       {t.review_status === 'pending' && (
                         <span className="text-xs text-yellow-500">審査中</span>
                       )}
@@ -375,6 +462,12 @@ export default function DashboardPage() {
                       className="text-xs text-zinc-500 hover:text-white underline"
                     >
                       ISRC
+                    </button>
+                    <button
+                      onClick={() => toggleMetadataEditor(t)}
+                      className="text-xs text-zinc-500 hover:text-white underline"
+                    >
+                      作品情報
                     </button>
                     <button
                       onClick={() => toggleLyricsEditor(t.id)}
@@ -413,6 +506,72 @@ export default function DashboardPage() {
                         閉じる
                       </button>
                     </div>
+                  </div>
+                )}
+                {metadataEditingId === t.id && metadataDraft && (
+                  <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="text-xs text-zinc-400">
+                        楽曲の種類
+                        <select
+                          value={metadataDraft.recording_type}
+                          onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, recording_type: e.target.value as RecordingType, rights_status: e.target.value === 'original' ? 'original' : prev.rights_status === 'original' ? 'permission_obtained' : prev.rights_status })}
+                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white"
+                        >
+                          {RECORDING_TYPES.map((type) => <option key={type} value={type}>{RECORDING_TYPE_LABELS[type]}</option>)}
+                        </select>
+                      </label>
+                      <label className="text-xs text-zinc-400">
+                        関連コンテンツ
+                        <select
+                          value={metadataDraft.content_category}
+                          onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, content_category: e.target.value as ContentCategory })}
+                          className="mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white"
+                        >
+                          {CONTENT_CATEGORIES.map((category) => <option key={category} value={category}>{CONTENT_CATEGORY_LABELS[category]}</option>)}
+                        </select>
+                      </label>
+                    </div>
+                    {(metadataDraft.recording_type !== 'original' || metadataDraft.content_category !== 'none') && (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <input value={metadataDraft.source_title} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, source_title: e.target.value })} placeholder="原曲・元作品名" className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white placeholder-zinc-600" />
+                        <input value={metadataDraft.source_artist_name} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, source_artist_name: e.target.value })} placeholder="原アーティスト名" className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white placeholder-zinc-600" />
+                        <input value={metadataDraft.source_work_title} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, source_work_title: e.target.value })} placeholder="作品・コンテンツ名" className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white placeholder-zinc-600" />
+                        <input value={metadataDraft.source_url} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, source_url: e.target.value })} placeholder="参照URL（任意）" className="rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white placeholder-zinc-600" />
+                      </div>
+                    )}
+                    {metadataDraft.recording_type !== 'original' && (
+                      <select value={metadataDraft.rights_status} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, rights_status: e.target.value as RightsStatus })} className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white">
+                        {RIGHTS_STATUSES.filter((status) => status !== 'original').map((status) => <option key={status} value={status}>{RIGHTS_STATUS_LABELS[status]}</option>)}
+                      </select>
+                    )}
+                    <label className="flex items-start gap-2 text-xs text-zinc-400">
+                      <input type="checkbox" checked={metadataDraft.rights_confirmed} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, rights_confirmed: e.target.checked })} className="mt-0.5 h-4 w-4 rounded accent-white" />
+                      <span>配信に必要な権利・許諾を確認済みです。</span>
+                    </label>
+                    <textarea value={metadataDraft.rights_note} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, rights_note: e.target.value })} rows={2} maxLength={1000} placeholder="権利確認メモ（任意）" className="w-full resize-none rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white placeholder-zinc-600" />
+
+                    <div className="space-y-2 border-t border-zinc-800 pt-3">
+                      <p className="text-xs text-zinc-400">参加者クレジット</p>
+                      {metadataDraft.credits.map((credit, index) => (
+                        <div key={`${credit.display_name}-${index}`} className="flex gap-2">
+                          <select value={credit.role} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, credits: prev.credits.map((item, i) => i === index ? { ...item, role: e.target.value as TrackCreditRole } : item) })} className="w-32 rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white">
+                            {TRACK_CREDIT_ROLES.map((role) => <option key={role} value={role}>{TRACK_CREDIT_ROLE_LABELS[role]}</option>)}
+                          </select>
+                          <input value={credit.display_name} onChange={(e) => setMetadataDraft((prev) => prev && { ...prev, credits: prev.credits.map((item, i) => i === index ? { ...item, display_name: e.target.value, artist_id: null } : item) })} className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-2 py-2 text-xs text-white" />
+                          <button type="button" onClick={() => setMetadataDraft((prev) => prev && { ...prev, credits: prev.credits.filter((_, i) => i !== index) })} className="text-xs text-zinc-500 underline hover:text-white">削除</button>
+                        </div>
+                      ))}
+                      {metadataDraft.credits.length < 20 && (
+                        <button type="button" onClick={() => setMetadataDraft((prev) => prev && { ...prev, credits: [...prev.credits, { artist_id: null, display_name: '', role: 'featured_artist' }] })} className="text-xs text-zinc-400 underline hover:text-white">＋クレジットを追加</button>
+                      )}
+                    </div>
+                    {metadataError && <p className="text-xs text-red-400">{metadataError}</p>}
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => saveMetadata(t.id)} disabled={metadataSaving} className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black disabled:opacity-40">{metadataSaving ? '保存中…' : '作品情報を保存'}</button>
+                      <button type="button" onClick={() => { setMetadataEditingId(null); setMetadataDraft(null) }} className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs">閉じる</button>
+                    </div>
+                    <p className="text-[11px] leading-5 text-zinc-600">作品情報やクレジットを変更した楽曲は、表示内容を確認するため再審査になります。</p>
                   </div>
                 )}
                 {lyricsEditingId === t.id && (
