@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Player } from '@/components/Player'
 import { usePlayerQueue } from '@/lib/player/queue'
+import type { TrackCredit } from '@/lib/music/credits'
 
 interface PlaylistTrackRow {
   position: number
@@ -15,6 +16,7 @@ interface PlaylistTrackRow {
     duration_sec: number
     ai_generated: boolean
     artists: { id: string; name: string } | null
+    credits?: TrackCredit[]
   } | null
 }
 

@@ -26,7 +26,12 @@ export async function GET(req: NextRequest) {
     .eq('review_status', 'approved')
     .eq('fraud_suspended', false)
     .order('created_at', { ascending: false })
-    .limit(50)
+
+  // 検索時は全候補から一致判定を行う。先に50件へ絞ると、古い楽曲や
+  // クレジット・作品名だけが一致する楽曲が検索結果から欠落する。
+  if (!q?.trim()) {
+    query.limit(50)
+  }
 
   const { data, error } = await query
 
@@ -51,7 +56,7 @@ export async function GET(req: NextRequest) {
       ...track.credits.map((credit) => credit.artist?.name),
     ]
     return searchable.some((value) => value?.toLocaleLowerCase().includes(normalizedQuery))
-  })
+  }).slice(0, 50)
 
   return NextResponse.json({ tracks })
 }
