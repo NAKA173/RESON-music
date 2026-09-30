@@ -1,0 +1,208 @@
+{
+  "Common": {
+    "appName": "RESON",
+    "language": {
+      "ja": "日本語",
+      "en": "英語"
+    }
+  },
+  "Landing": {
+    "nav": {
+      "about": "思想",
+      "pricing": "料金",
+      "artists": "アーティスト",
+      "login": "ログイン",
+      "start": "無料で始める"
+    },
+    "hero": {
+      "title": "聴くことが、そのまま <highlight>音楽文化</highlight> を育てる。",
+      "description": "RESONは再生数ではなく「熱量」（応援率・完聴率・リピート率）で収益を分配するサブスクです。知名度ではなく相性で音楽と出会い、感動した人が任意で感謝を返せる仕組みを目指しています。",
+      "listen": "音楽を聴く",
+      "learnMore": "仕組みを見る",
+      "note": "クレジットカード不要・登録は1分",
+      "trending": "熱量が高まっている楽曲",
+      "completion": "完聴率 {value}%",
+      "viewAll": "すべての楽曲を見る →"
+    },
+    "about": {
+      "title": "上位1%より、99%が報われる設計。",
+      "paragraph1": "既存サービスは再生数の上位アーティストに収益が集中しがちです。RESONは熱量スコア（再生時間・応援率・完聴率）で分配することで、知名度のないインディーズ・新人アーティストにもチャンスが生まれる構造を意図しています。",
+      "paragraph2": "分配の計算式はすべて公開されており、アーティストは自分のスコアと収益を自分で検証できます。"
+    },
+    "features": {
+      "distribution": {
+        "title": "熱量で分配",
+        "desc": "再生数ではなく、応援率・完聴率・リピート率から算出した「熱量」で収益を分配します。"
+      },
+      "formula": {
+        "title": "計算式を常時公開",
+        "desc": "分配の計算式はパブリックページで常時公開。アーティストは自分のスコアを検証できます。"
+      },
+      "discovery": {
+        "title": "相性で発見する",
+        "desc": "知名度ではなく、聴く人との相性で音楽と出会う発見性の設計。"
+      },
+      "gratitude": {
+        "title": "感謝を返せる設計",
+        "desc": "感動した人が任意で応援できる、強制ではない投げ銭の仕組み。"
+      }
+    },
+    "pricing": {
+      "title": "料金プラン",
+      "perMonth": "/月",
+      "student": "中高生の方は Student プラン（{price}・.ed.jp認証）もご利用いただけます。",
+      "plans": {
+        "free": {
+          "tag": "まずは無料で",
+          "features": {
+            "hours": "月15時間まで再生",
+            "ads": "広告あり"
+          },
+          "cta": "無料で始める"
+        },
+        "standard": {
+          "tag": "いちばん人気",
+          "features": {
+            "unlimited": "無制限再生",
+            "noAds": "広告なし",
+            "support": "応援・投げ銭"
+          },
+          "cta": "Standardで始める"
+        },
+        "support": {
+          "tag": "アーティストを支える",
+          "features": {
+            "quality": "高音質再生",
+            "bonus": "応援ボーナス",
+            "fee": "月間投げ銭手数料3.6%"
+          },
+          "cta": "Support+で始める"
+        }
+      }
+    },
+    "artists": {
+      "title": "アーティストのあなたへ。",
+      "description": "累計100再生を超えると分配対象になります。計算式はすべて公開されているので、自分のスコアと収益を自分で検証できます。",
+      "register": "アーティスト登録",
+      "distribution": "分配の仕組みを読む"
+    },
+    "footer": {
+      "privacy": "個人データの取扱い"
+    }
+  },
+  "Auth": {
+    "common": {
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "passwordConfirm": "パスワード（確認）",
+      "passwordMin": "8文字以上",
+      "back": "戻る"
+    },
+    "login": {
+      "title": "ログイン",
+      "submitting": "ログイン中…",
+      "submit": "ログイン",
+      "forgot": "パスワードを忘れた場合",
+      "noAccount": "アカウントをお持ちでない方は",
+      "register": "新規登録"
+    },
+    "register": {
+      "title": "新規登録",
+      "validation": {
+        "passwordMin": "パスワードは8文字以上で入力してください",
+        "passwordMismatch": "パスワードが一致しません",
+        "accountFailed": "登録を完了できませんでした。時間をおいて再試行してください。",
+        "artistFailed": "登録申請を完了できませんでした。時間をおいて再試行してください。",
+        "network": "通信に失敗しました。接続を確認してもう一度お試しください。",
+        "rightsRequired": "権利確認への同意が必要です",
+        "parentRequired": "未成年の場合は保護者の氏名・連絡先が必要です"
+      },
+      "account": {
+        "creating": "登録中…",
+        "create": "アカウントを作成",
+        "privacyBefore": "登録前に",
+        "privacyLink": "個人データの取扱い",
+        "privacyAfter": "をご確認ください。",
+        "existing": "すでにアカウントをお持ちの方は",
+        "login": "ログイン"
+      },
+      "role": {
+        "question": "RESONをどう使いますか？",
+        "listenerTitle": "リスナーとして始める",
+        "listenerDescription": "楽曲を聴いて応援する。あとからいつでもアーティスト登録できます",
+        "artistTitle": "アーティストとして始める",
+        "artistDescription": "楽曲をアップロードして配信する（審査・出金先の登録があります）"
+      },
+      "confirmEmail": {
+        "title": "確認メールを送信しました",
+        "message": "{email} に届いた確認リンクをクリックしてください。確認後、ログインしてください。",
+        "artistContinuation": "ログイン後、ホーム画面から「アーティストとして登録する」を選んでアーティスト登録を続けられます。",
+        "login": "ログインへ"
+      },
+      "artist": {
+        "name": "アーティスト名",
+        "namePlaceholder": "あなたの名前・グループ名",
+        "bio": "自己紹介（任意）",
+        "bioPlaceholder": "どんな音楽を作っているか、活動拠点など",
+        "next": "次へ（出金先の登録）"
+      },
+      "bank": {
+        "description": "分配金・出金の受け取り先として使用します。口座名義は登録者本人の氏名と一致させてください。",
+        "bankName": "銀行名",
+        "branchName": "支店名",
+        "accountType": "口座種別",
+        "ordinary": "普通",
+        "checking": "当座",
+        "accountNumber": "口座番号",
+        "holderName": "口座名義（カナ）",
+        "holderPlaceholder": "例: ヤマダ タロウ",
+        "next": "次へ（権利確認）"
+      },
+      "rights": {
+        "intro": "アップロードする楽曲について、以下を確認してください。",
+        "item1": "自身が著作権・実演者の権利を有する、または権利者から許諾を得ている楽曲のみをアップロードします",
+        "item2": "第三者の権利を侵害するコンテンツ（無許諾サンプリング・カバー等）は登録しません",
+        "item3": "登録した銀行口座情報が正確であることを確認しました",
+        "agree": "上記の内容に同意します",
+        "minor": "未成年です（保護者の同意が必要です）",
+        "parentName": "保護者の氏名",
+        "parentContact": "保護者の連絡先",
+        "parentContactPlaceholder": "保護者の連絡先（電話番号 or メールアドレス）",
+        "parentNotice": "保護者本人が本登録内容（著作権確認・銀行口座情報を含む）に同意していることを確認してください。",
+        "submitting": "登録中…",
+        "submit": "登録を申請する"
+      },
+      "done": {
+        "title": "登録申請を受け付けました",
+        "description": "現在審査中です。審査完了まで楽曲の配信開始をお待ちください。アップロード自体は審査結果を待たずに行えます。",
+        "dashboard": "ダッシュボードへ"
+      },
+      "steps": {
+        "account": "アカウント",
+        "profile": "プロフィール",
+        "bank": "出金先",
+        "rights": "権利確認"
+      }
+    },
+    "resetRequest": {
+      "title": "パスワードの再設定",
+      "sent": "{email} にパスワード再設定用のリンクを送信しました。メール内のリンクから再設定を完了してください。",
+      "back": "ログインへ戻る",
+      "helper": "登録済みのメールアドレスに再設定用のリンクを送信します",
+      "sending": "送信中…",
+      "send": "再設定リンクを送信"
+    },
+    "resetConfirm": {
+      "title": "新しいパスワードの設定",
+      "validation": {
+        "passwordMin": "パスワードは8文字以上で入力してください",
+        "passwordMismatch": "パスワードが一致しません"
+      },
+      "checking": "リンクを確認しています…メールのリンクから直接開いてください。",
+      "newPassword": "新しいパスワード",
+      "newPasswordConfirm": "新しいパスワード（確認）",
+      "updating": "更新中…",
+      "update": "パスワードを更新する"
+    }
+  }
+}

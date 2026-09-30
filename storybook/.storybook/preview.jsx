@@ -1,4 +1,6 @@
 import React from 'react'
+import { NextIntlClientProvider } from 'next-intl'
+import jaMessages from '../../messages/ja.json'
 import { MINIMAL_VIEWPORTS } from 'storybook/viewport'
 import '../../app/globals.css'
 
@@ -36,9 +38,11 @@ export const decorators = [
     }
 
     return (
-      <div className="min-h-screen bg-[var(--bg)] p-8 text-[var(--text)]">
-        <Story />
-      </div>
+      <NextIntlClientProvider locale="ja" messages={jaMessages}>
+        <div className="min-h-screen bg-[var(--bg)] p-8 text-[var(--text)]">
+          <Story />
+        </div>
+      </NextIntlClientProvider>
     )
   },
 ]

@@ -2,9 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
 export default function ResetPasswordRequestPage() {
+  const t = useTranslations('Auth.resetRequest')
+  const common = useTranslations('Auth.common')
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -28,7 +31,7 @@ export default function ResetPasswordRequestPage() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">RESON</h1>
-          <p className="mt-2 text-sm text-zinc-400">パスワードの再設定</p>
+          <p className="mt-2 text-sm text-zinc-400">{t('title')}</p>
         </div>
 
         {error && (
@@ -41,16 +44,16 @@ export default function ResetPasswordRequestPage() {
           <div className="text-center space-y-4">
             <p className="text-4xl">📩</p>
             <p className="text-sm text-zinc-300">
-              {email} にパスワード再設定用のリンクを送信しました。メール内のリンクから再設定を完了してください。
+              {t('sent', { email })}
             </p>
             <Link href="/login" className="block text-sm text-zinc-500 hover:text-zinc-300 transition">
-              ログインへ戻る
+              {t('back')}
             </Link>
           </div>
         ) : (
           <form onSubmit={requestReset} className="space-y-4">
             <div>
-              <label className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
+              <label className="block text-sm text-zinc-400 mb-1">{common('email')}</label>
               <input
                 type="email"
                 placeholder="you@example.com"
@@ -59,17 +62,17 @@ export default function ResetPasswordRequestPage() {
                 required
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
               />
-              <p className="mt-1 text-xs text-zinc-600">登録済みのメールアドレスに再設定用のリンクを送信します</p>
+              <p className="mt-1 text-xs text-zinc-600">{t('helper')}</p>
             </div>
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
             >
-              {loading ? '送信中…' : '再設定リンクを送信'}
+              {loading ? t('sending') : t('send')}
             </button>
             <Link href="/login" className="block text-center text-sm text-zinc-500 hover:text-zinc-300 transition">
-              ログインへ戻る
+              {t('back')}
             </Link>
           </form>
         )}

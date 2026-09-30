@@ -1,3 +1,4 @@
+import { NextIntlClientProvider } from "next-intl";
 import type { Metadata } from "next";
 import { Zen_Kaku_Gothic_New, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
@@ -37,7 +38,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      </body>
     </html>
   );
 }

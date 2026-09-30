@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
+  const t = useTranslations('Auth.login')
+  const common = useTranslations('Auth.common')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,7 +42,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">RESON</h1>
-          <p className="mt-2 text-sm text-zinc-400">ログイン</p>
+          <p className="mt-2 text-sm text-zinc-400">{t('title')}</p>
         </div>
 
         {error && (
@@ -50,7 +53,7 @@ export default function LoginPage() {
 
         <form onSubmit={login} className="space-y-4">
           <div>
-            <label htmlFor="login-email" className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
+            <label htmlFor="login-email" className="block text-sm text-zinc-400 mb-1">{common('email')}</label>
             <input
               id="login-email"
               type="email"
@@ -62,7 +65,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="login-password" className="block text-sm text-zinc-400 mb-1">パスワード</label>
+            <label htmlFor="login-password" className="block text-sm text-zinc-400 mb-1">{common('password')}</label>
             <input
               id="login-password"
               type="password"
@@ -77,17 +80,17 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
           >
-            {loading ? 'ログイン中…' : 'ログイン'}
+            {loading ? t('submitting') : t('submit')}
           </button>
           <Link href="/reset-password" className="block text-center text-sm text-zinc-500 hover:text-zinc-300 transition">
-            パスワードを忘れた場合
+            {t('forgot')}
           </Link>
         </form>
 
         <p className="text-center text-sm text-zinc-500">
-          アカウントをお持ちでない方は{' '}
+          {t('noAccount')}{' '}
           <Link href="/register" className="text-white hover:underline">
-            新規登録
+            {t('register')}
           </Link>
         </p>
       </div>

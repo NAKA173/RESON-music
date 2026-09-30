@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 type Step = 'account' | 'role' | 'confirm-email' | 'artist' | 'bank' | 'rights' | 'done'
 type Role = 'listener' | 'artist'
@@ -17,6 +18,8 @@ async function readJson(response: Response): Promise<{ error?: string; needs_ema
 
 export default function RegisterPage() {
   const router = useRouter()
+  const t = useTranslations('Auth.register')
+  const common = useTranslations('Auth.common')
   const [step, setStep] = useState<Step>('account')
   const [role, setRole] = useState<Role | null>(null)
   const [needsConfirmation, setNeedsConfirmation] = useState(false)
@@ -46,11 +49,11 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
     if (password.length < 8) {
-      setError('パスワードは8文字以上で入力してください')
+      setError(t('validation.passwordMin'))
       return
     }
     if (password !== confirmPassword) {
-      setError('パスワードが一致しません')
+      setError(t('validation.passwordMismatch'))
       return
     }
     setLoading(true)
@@ -63,14 +66,14 @@ export default function RegisterPage() {
       })
       const data = await readJson(res)
       if (!res.ok) {
-        setError(data.error ?? '登録を完了できませんでした。時間をおいて再試行してください。')
+        setError(data.error ?? t('validation.accountFailed'))
         return
       }
       sessionStorage.removeItem('reson_ref')
       setNeedsConfirmation(!!data.needs_email_confirmation)
       setStep('role')
     } catch {
-      setError('通信に失敗しました。接続を確認してもう一度お試しください。')
+      setError(t('validation.network'))
     } finally {
       setLoading(false)
     }
@@ -104,11 +107,11 @@ export default function RegisterPage() {
   async function submitRegistration(e: React.FormEvent) {
     e.preventDefault()
     if (!rightsConfirmed) {
-      setError('権利確認への同意が必要です')
+      setError(t('validation.rightsRequired'))
       return
     }
     if (isMinor && (!parentConsentName.trim() || !parentConsentContact.trim())) {
-      setError('未成年の場合は保護者の氏名・連絡先が必要です')
+      setError(t('validation.parentRequired'))
       return
     }
     setError('')
@@ -135,12 +138,12 @@ export default function RegisterPage() {
       })
       const data = await readJson(res)
       if (!res.ok) {
-        setError(data.error ?? '登録申請を完了できませんでした。時間をおいて再試行してください。')
+        setError(data.error ?? t('validation.artistFailed'))
         return
       }
       setStep('done')
     } catch {
-      setError('通信に失敗しました。接続を確認してもう一度お試しください。')
+      setError(t('validation.network'))
     } finally {
       setLoading(false)
     }
@@ -151,7 +154,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">RESON</h1>
-          <p className="mt-2 text-sm text-zinc-400">新規登録</p>
+          <p className="mt-2 text-sm text-zinc-400">{t('title')}</p>
         </div>
 
         {role === 'artist' && step !== 'done' && step !== 'confirm-email' && step !== 'role' && (
@@ -167,7 +170,7 @@ export default function RegisterPage() {
         {step === 'account' && (
           <form onSubmit={createAccount} className="space-y-4">
             <div>
-              <label htmlFor="register-email" className="block text-sm text-zinc-400 mb-1">メールアドレス</label>
+              <label htmlFor="register-email" className="block text-sm text-zinc-400 mb-1">{common('email')}</label>
               <input
                 id="register-email"
                 type="email"
@@ -180,7 +183,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label htmlFor="register-password" className="block text-sm text-zinc-400 mb-1">パスワード</label>
+              <label htmlFor="register-password" className="block text-sm text-zinc-400 mb-1">{common('password')}</label>
               <input
                 id="register-password"
                 type="password"
@@ -191,10 +194,10 @@ export default function RegisterPage() {
                 minLength={8}
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
               />
-              <p className="mt-1 text-xs text-zinc-600">8文字以上</p>
+              <p className="mt-1 text-xs text-zinc-600">{common('passwordMin')}</p>
             </div>
             <div>
-              <label htmlFor="register-password-confirm" className="block text-sm text-zinc-400 mb-1">パスワード（確認）</label>
+              <label htmlFor="register-password-confirm" className="block text-sm text-zinc-400 mb-1">{common('passwordConfirm')}</label>
               <input
                 id="register-password-confirm"
                 type="password"
@@ -212,36 +215,36 @@ export default function RegisterPage() {
               aria-busy={loading}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
             >
-              {loading ? '登録中…' : 'アカウントを作成'}
+              {loading ? t('account.creating') : t('account.create')}
             </button>
             <p className="text-center text-xs leading-5 text-zinc-500">
-              登録前に<Link href="/privacy" className="underline hover:text-white">個人データの取扱い</Link>をご確認ください。
+              {t('account.privacyBefore')}<Link href="/privacy" className="underline hover:text-white">{t('account.privacyLink')}</Link>{t('account.privacyAfter')}
             </p>
             <p className="text-center text-sm text-zinc-500">
-              すでにアカウントをお持ちの方は{' '}
-              <Link href="/login" className="text-white hover:underline">ログイン</Link>
+              {t('account.existing')}{' '}
+              <Link href="/login" className="text-white hover:underline">{t('account.login')}</Link>
             </p>
           </form>
         )}
 
         {step === 'role' && (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-400 text-center">RESONをどう使いますか？</p>
+            <p className="text-sm text-zinc-400 text-center">{t('role.question')}</p>
             <button
               type="button"
               onClick={() => chooseRole('listener')}
               className="w-full text-left bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-4 hover:border-zinc-400 transition"
             >
-              <span className="block font-semibold">リスナーとして始める</span>
-              <span className="block text-xs text-zinc-500 mt-1">楽曲を聴いて応援する。あとからいつでもアーティスト登録できます</span>
+              <span className="block font-semibold">{t('role.listenerTitle')}</span>
+              <span className="block text-xs text-zinc-500 mt-1">{t('role.listenerDescription')}</span>
             </button>
             <button
               type="button"
               onClick={() => chooseRole('artist')}
               className="w-full text-left bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-4 hover:border-zinc-400 transition"
             >
-              <span className="block font-semibold">アーティストとして始める</span>
-              <span className="block text-xs text-zinc-500 mt-1">楽曲をアップロードして配信する（審査・出金先の登録があります）</span>
+              <span className="block font-semibold">{t('role.artistTitle')}</span>
+              <span className="block text-xs text-zinc-500 mt-1">{t('role.artistDescription')}</span>
             </button>
           </div>
         )}
@@ -249,16 +252,16 @@ export default function RegisterPage() {
         {step === 'confirm-email' && (
           <div className="text-center space-y-4">
             <p className="text-4xl">📩</p>
-            <h2 className="text-lg font-bold">確認メールを送信しました</h2>
+            <h2 className="text-lg font-bold">{t('confirmEmail.title')}</h2>
             <p className="text-sm text-zinc-400">
-              {email} に届いた確認リンクをクリックしてください。確認後、ログインしてください。
-              {role === 'artist' && '（ログイン後、ホーム画面から「アーティストとして登録する」を選んでアーティスト登録を続けられます）'}
+              {t('confirmEmail.message', { email })}
+              {role === 'artist' && <> {t('confirmEmail.artistContinuation')}</>}
             </p>
             <button
               onClick={() => router.push('/login')}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
             >
-              ログインへ
+              {t('confirmEmail.login')}
             </button>
           </div>
         )}
@@ -266,11 +269,11 @@ export default function RegisterPage() {
         {step === 'artist' && (
           <form onSubmit={nextFromArtist} className="space-y-4">
             <div>
-              <label htmlFor="artist-name" className="block text-sm text-zinc-400 mb-1">アーティスト名 <span className="text-red-400">*</span></label>
+              <label htmlFor="artist-name" className="block text-sm text-zinc-400 mb-1">{t('artist.name')} <span className="text-red-400">*</span></label>
               <input
                 id="artist-name"
                 type="text"
-                placeholder="あなたの名前・グループ名"
+                placeholder={t('artist.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={100}
@@ -279,10 +282,10 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label htmlFor="artist-bio" className="block text-sm text-zinc-400 mb-1">自己紹介（任意）</label>
+              <label htmlFor="artist-bio" className="block text-sm text-zinc-400 mb-1">{t('artist.bio')}</label>
               <textarea
                 id="artist-bio"
-                placeholder="どんな音楽を作っているか、活動拠点など"
+                placeholder={t('artist.bioPlaceholder')}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 rows={4}
@@ -295,7 +298,7 @@ export default function RegisterPage() {
               type="submit"
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
             >
-              次へ（出金先の登録）
+              {t('artist.next')}
             </button>
           </form>
         )}
@@ -303,10 +306,10 @@ export default function RegisterPage() {
         {step === 'bank' && (
           <form onSubmit={nextFromBank} className="space-y-4">
             <p className="text-xs text-zinc-500">
-              分配金・出金の受け取り先として使用します。口座名義は登録者本人の氏名と一致させてください。
+              {t('bank.description')}
             </p>
             <div>
-              <label htmlFor="bank-name" className="block text-sm text-zinc-400 mb-1">銀行名 <span className="text-red-400">*</span></label>
+              <label htmlFor="bank-name" className="block text-sm text-zinc-400 mb-1">{t('bank.bankName')} <span className="text-red-400">*</span></label>
               <input
                 id="bank-name"
                 type="text"
@@ -317,7 +320,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label htmlFor="branch-name" className="block text-sm text-zinc-400 mb-1">支店名 <span className="text-red-400">*</span></label>
+              <label htmlFor="branch-name" className="block text-sm text-zinc-400 mb-1">{t('bank.branchName')} <span className="text-red-400">*</span></label>
               <input
                 id="branch-name"
                 type="text"
@@ -328,19 +331,19 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label htmlFor="account-type" className="block text-sm text-zinc-400 mb-1">口座種別 <span className="text-red-400">*</span></label>
+              <label htmlFor="account-type" className="block text-sm text-zinc-400 mb-1">{t('bank.accountType')} <span className="text-red-400">*</span></label>
               <select
                 id="account-type"
                 value={accountType}
                 onChange={(e) => setAccountType(e.target.value as 'ordinary' | 'checking')}
                 className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-zinc-400"
               >
-                <option value="ordinary">普通</option>
-                <option value="checking">当座</option>
+                <option value="ordinary">{t('bank.ordinary')}</option>
+                <option value="checking">{t('bank.checking')}</option>
               </select>
             </div>
             <div>
-              <label htmlFor="account-number" className="block text-sm text-zinc-400 mb-1">口座番号 <span className="text-red-400">*</span></label>
+              <label htmlFor="account-number" className="block text-sm text-zinc-400 mb-1">{t('bank.accountNumber')} <span className="text-red-400">*</span></label>
               <input
                 id="account-number"
                 type="text"
@@ -351,11 +354,11 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label htmlFor="account-holder-name" className="block text-sm text-zinc-400 mb-1">口座名義（カナ） <span className="text-red-400">*</span></label>
+              <label htmlFor="account-holder-name" className="block text-sm text-zinc-400 mb-1">{t('bank.holderName')} <span className="text-red-400">*</span></label>
               <input
                 id="account-holder-name"
                 type="text"
-                placeholder="例: ヤマダ タロウ"
+                placeholder={t('bank.holderPlaceholder')}
                 value={accountHolderName}
                 onChange={(e) => setAccountHolderName(e.target.value)}
                 required
@@ -366,14 +369,14 @@ export default function RegisterPage() {
               type="submit"
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
             >
-              次へ（権利確認）
+              {t('bank.next')}
             </button>
             <button
               type="button"
               onClick={() => setStep('artist')}
               className="w-full text-sm text-zinc-500 hover:text-zinc-300 transition"
             >
-              戻る
+              {common('back')}
             </button>
           </form>
         )}
@@ -381,11 +384,11 @@ export default function RegisterPage() {
         {step === 'rights' && (
           <form onSubmit={submitRegistration} className="space-y-4">
             <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-300 space-y-2">
-              <p>アップロードする楽曲について、以下を確認してください。</p>
+              <p>{t('rights.intro')}</p>
               <ul className="list-disc list-inside text-zinc-400 space-y-1">
-                <li>自身が著作権・実演者の権利を有する、または権利者から許諾を得ている楽曲のみをアップロードします</li>
-                <li>第三者の権利を侵害するコンテンツ（無許諾サンプリング・カバー等）は登録しません</li>
-                <li>登録した銀行口座情報が正確であることを確認しました</li>
+                <li>{t('rights.item1')}</li>
+                <li>{t('rights.item2')}</li>
+                <li>{t('rights.item3')}</li>
               </ul>
             </div>
             <label className="flex items-start gap-3 cursor-pointer">
@@ -395,7 +398,7 @@ export default function RegisterPage() {
                 onChange={(e) => setRightsConfirmed(e.target.checked)}
                 className="w-5 h-5 mt-0.5 rounded accent-white"
               />
-              <span className="text-sm">上記の内容に同意します</span>
+              <span className="text-sm">{t('rights.agree')}</span>
             </label>
 
             <label className="flex items-start gap-3 cursor-pointer border-t border-zinc-800 pt-4">
@@ -405,28 +408,28 @@ export default function RegisterPage() {
                 onChange={(e) => setIsMinor(e.target.checked)}
                 className="w-5 h-5 mt-0.5 rounded accent-white"
               />
-              <span className="text-sm">未成年です（保護者の同意が必要です）</span>
+              <span className="text-sm">{t('rights.minor')}</span>
             </label>
             {isMinor && (
               <div className="space-y-2 pl-8">
                 <input
                   type="text"
-                  aria-label="保護者の氏名"
-                  placeholder="保護者の氏名"
+                  aria-label={t('rights.parentName')}
+                  placeholder={t('rights.parentName')}
                   value={parentConsentName}
                   onChange={(e) => setParentConsentName(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
                 />
                 <input
                   type="text"
-                  aria-label="保護者の連絡先"
-                  placeholder="保護者の連絡先（電話番号 or メールアドレス）"
+                  aria-label={t('rights.parentContact')}
+                  placeholder={t('rights.parentContactPlaceholder')}
                   value={parentConsentContact}
                   onChange={(e) => setParentConsentContact(e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
                 />
                 <p className="text-xs text-zinc-600">
-                  保護者本人が本登録内容（著作権確認・銀行口座情報を含む）に同意していることを確認してください。
+                  {t('rights.parentNotice')}
                 </p>
               </div>
             )}
@@ -435,14 +438,14 @@ export default function RegisterPage() {
               disabled={loading || !rightsConfirmed}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 disabled:opacity-50 transition"
             >
-              {loading ? '登録中…' : '登録を申請する'}
+              {loading ? t('rights.submitting') : t('rights.submit')}
             </button>
             <button
               type="button"
               onClick={() => setStep('bank')}
               className="w-full text-sm text-zinc-500 hover:text-zinc-300 transition"
             >
-              戻る
+              {common('back')}
             </button>
           </form>
         )}
@@ -450,15 +453,15 @@ export default function RegisterPage() {
         {step === 'done' && (
           <div className="text-center space-y-4">
             <p className="text-4xl">🛠️</p>
-            <h2 className="text-lg font-bold">登録申請を受け付けました</h2>
+            <h2 className="text-lg font-bold">{t('done.title')}</h2>
             <p className="text-sm text-zinc-400">
-              現在審査中です。審査完了まで楽曲の配信開始をお待ちください。アップロード自体は審査結果を待たずに行えます。
+              {t('done.description')}
             </p>
             <button
               onClick={() => router.push('/dashboard')}
               className="w-full bg-white text-black font-semibold rounded-lg py-3 hover:bg-zinc-200 transition"
             >
-              ダッシュボードへ
+              {t('done.dashboard')}
             </button>
           </div>
         )}
@@ -468,11 +471,12 @@ export default function RegisterPage() {
 }
 
 function StepIndicator({ current }: { current: Exclude<Step, 'done' | 'confirm-email' | 'role'> }) {
+  const t = useTranslations('Auth.register')
   const steps: { key: Exclude<Step, 'done' | 'confirm-email' | 'role'>; label: string }[] = [
-    { key: 'account', label: 'アカウント' },
-    { key: 'artist', label: 'プロフィール' },
-    { key: 'bank', label: '出金先' },
-    { key: 'rights', label: '権利確認' },
+    { key: 'account', label: t('steps.account') },
+    { key: 'artist', label: t('steps.profile') },
+    { key: 'bank', label: t('steps.bank') },
+    { key: 'rights', label: t('steps.rights') },
   ]
   const idx = steps.findIndex((s) => s.key === current)
 

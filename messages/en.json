@@ -1,0 +1,208 @@
+{
+  "Common": {
+    "appName": "RESON",
+    "language": {
+      "ja": "Japanese",
+      "en": "English"
+    }
+  },
+  "Landing": {
+    "nav": {
+      "about": "Philosophy",
+      "pricing": "Pricing",
+      "artists": "Artists",
+      "login": "Log in",
+      "start": "Start free"
+    },
+    "hero": {
+      "title": "Listening should <highlight>grow music culture</highlight>.",
+      "description": "RESON distributes subscription revenue based on listener engagement—support rate, completion rate, and repeat listening—rather than raw play counts. We aim to help listeners discover music through compatibility and give them an optional way to support artists they value.",
+      "listen": "Start listening",
+      "learnMore": "How it works",
+      "note": "No credit card required · Sign up in about a minute",
+      "trending": "Tracks gaining engagement",
+      "completion": "Completion {value}%",
+      "viewAll": "View all tracks →"
+    },
+    "about": {
+      "title": "Designed to reward more than the top 1%.",
+      "paragraph1": "Streaming revenue often concentrates around the most-played artists. RESON uses an engagement score based on listening time, support rate, and completion rate to create more opportunities for independent and emerging artists, regardless of name recognition.",
+      "paragraph2": "The distribution formula is published so artists can verify their own score and revenue."
+    },
+    "features": {
+      "distribution": {
+        "title": "Distribute by engagement",
+        "desc": "Revenue is distributed using engagement calculated from support rate, completion rate, and repeat listening—not play counts alone."
+      },
+      "formula": {
+        "title": "Publish the formula",
+        "desc": "The distribution formula is always public, allowing artists to verify their own score."
+      },
+      "discovery": {
+        "title": "Discover by compatibility",
+        "desc": "Music discovery is designed around listener compatibility rather than artist popularity."
+      },
+      "gratitude": {
+        "title": "Optional direct support",
+        "desc": "Listeners can voluntarily support artists when a track resonates with them, without mandatory tipping."
+      }
+    },
+    "pricing": {
+      "title": "Plans",
+      "perMonth": "/month",
+      "student": "Middle and high school students can also use the Student plan ({price}, verified with a .ed.jp address).",
+      "plans": {
+        "free": {
+          "tag": "Start for free",
+          "features": {
+            "hours": "Up to 15 hours per month",
+            "ads": "Includes ads"
+          },
+          "cta": "Start free"
+        },
+        "standard": {
+          "tag": "Most popular",
+          "features": {
+            "unlimited": "Unlimited listening",
+            "noAds": "No ads",
+            "support": "Support and tipping"
+          },
+          "cta": "Start Standard"
+        },
+        "support": {
+          "tag": "Support artists more",
+          "features": {
+            "quality": "Higher-quality audio",
+            "bonus": "Support bonus",
+            "fee": "3.6% monthly tipping fee"
+          },
+          "cta": "Start Support+"
+        }
+      }
+    },
+    "artists": {
+      "title": "For artists.",
+      "description": "Once you exceed 100 total plays, you become eligible for distribution. The formula is fully published, so you can verify your score and revenue yourself.",
+      "register": "Register as an artist",
+      "distribution": "Read how distribution works"
+    },
+    "footer": {
+      "privacy": "Personal data"
+    }
+  },
+  "Auth": {
+    "common": {
+      "email": "Email address",
+      "password": "Password",
+      "passwordConfirm": "Confirm password",
+      "passwordMin": "At least 8 characters",
+      "back": "Back"
+    },
+    "login": {
+      "title": "Log in",
+      "submitting": "Logging in…",
+      "submit": "Log in",
+      "forgot": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "register": "Sign up"
+    },
+    "register": {
+      "title": "Create an account",
+      "validation": {
+        "passwordMin": "Password must be at least 8 characters.",
+        "passwordMismatch": "Passwords do not match.",
+        "accountFailed": "We couldn't complete registration. Please try again later.",
+        "artistFailed": "We couldn't submit your artist registration. Please try again later.",
+        "network": "The request failed. Check your connection and try again.",
+        "rightsRequired": "You must agree to the rights confirmation.",
+        "parentRequired": "Minors must provide a parent or guardian's name and contact information."
+      },
+      "account": {
+        "creating": "Creating account…",
+        "create": "Create account",
+        "privacyBefore": "Before registering, please review our ",
+        "privacyLink": "personal data policy",
+        "privacyAfter": ".",
+        "existing": "Already have an account?",
+        "login": "Log in"
+      },
+      "role": {
+        "question": "How will you use RESON?",
+        "listenerTitle": "Start as a listener",
+        "listenerDescription": "Listen to music and support artists. You can register as an artist later at any time.",
+        "artistTitle": "Start as an artist",
+        "artistDescription": "Upload and distribute music. Artist review and payout details are required."
+      },
+      "confirmEmail": {
+        "title": "Confirmation email sent",
+        "message": "Click the confirmation link sent to {email}, then log in after confirming your email.",
+        "artistContinuation": "After logging in, choose “Register as an artist” from the home screen to continue artist registration.",
+        "login": "Go to login"
+      },
+      "artist": {
+        "name": "Artist name",
+        "namePlaceholder": "Your name or group name",
+        "bio": "Bio (optional)",
+        "bioPlaceholder": "Describe your music, where you're based, and other background",
+        "next": "Next: payout details"
+      },
+      "bank": {
+        "description": "This account will receive distributions and withdrawals. The account holder name must match the registered person.",
+        "bankName": "Bank name",
+        "branchName": "Branch name",
+        "accountType": "Account type",
+        "ordinary": "Ordinary",
+        "checking": "Checking",
+        "accountNumber": "Account number",
+        "holderName": "Account holder name (Kana)",
+        "holderPlaceholder": "Example: ヤマダ タロウ",
+        "next": "Next: rights confirmation"
+      },
+      "rights": {
+        "intro": "Please confirm the following for music you upload.",
+        "item1": "I will upload only music for which I hold the copyright and performer rights, or for which I have permission from the rights holder.",
+        "item2": "I will not register content that infringes third-party rights, including unauthorized samples or covers.",
+        "item3": "I confirm that the bank account information I entered is accurate.",
+        "agree": "I agree to the above.",
+        "minor": "I am a minor and require parent or guardian consent.",
+        "parentName": "Parent or guardian name",
+        "parentContact": "Parent or guardian contact",
+        "parentContactPlaceholder": "Phone number or email address",
+        "parentNotice": "Confirm that your parent or guardian agrees to this registration, including the rights confirmation and bank account information.",
+        "submitting": "Submitting…",
+        "submit": "Submit registration"
+      },
+      "done": {
+        "title": "Registration submitted",
+        "description": "Your application is under review. Please wait for review before starting distribution. You can upload music while the review is pending.",
+        "dashboard": "Go to dashboard"
+      },
+      "steps": {
+        "account": "Account",
+        "profile": "Profile",
+        "bank": "Payout",
+        "rights": "Rights"
+      }
+    },
+    "resetRequest": {
+      "title": "Reset your password",
+      "sent": "We sent a password reset link to {email}. Open the link in the email to finish resetting your password.",
+      "back": "Back to login",
+      "helper": "We'll send a reset link to your registered email address.",
+      "sending": "Sending…",
+      "send": "Send reset link"
+    },
+    "resetConfirm": {
+      "title": "Set a new password",
+      "validation": {
+        "passwordMin": "Password must be at least 8 characters.",
+        "passwordMismatch": "Passwords do not match."
+      },
+      "checking": "Checking the link… Please open this page directly from the link in your email.",
+      "newPassword": "New password",
+      "newPasswordConfirm": "Confirm new password",
+      "updating": "Updating…",
+      "update": "Update password"
+    }
+  }
+}
