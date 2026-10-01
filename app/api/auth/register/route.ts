@@ -1,10 +1,25 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+function isValidEmail(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  if (value.length > 254) return false
+  if (value.includes(' ') || value.includes('\t') || value.includes('\n') || value.includes('\r')) return false
+
+  const atIndex = value.indexOf('@')
+  if (atIndex <= 0 || atIndex !== value.lastIndexOf('@')) return false
+
+  const local = value.slice(0, atIndex)
+  const domain = value.slice(atIndex + 1)
+  if (!local || !domain || domain.startsWith('.') || domain.endsWith('.')) return false
+
+  return domain.includes('.')
+}
+
 export async function POST(req: NextRequest) {
   const { email, password, ref } = await req.json()
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!isValidEmail(email)) {
     return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
   }
   if (!password || password.length < 8) {
