@@ -18,6 +18,17 @@ function isValidEmail(value: unknown): value is string {
 
 export async function POST(req: NextRequest) {
   const { email, password, ref } = await req.json()
+  const normalizedEmail = typeof email === 'string' ? email.trim() : ''
+  const atIndex = normalizedEmail.indexOf('@')
+  const domain = atIndex >= 0 ? normalizedEmail.slice(atIndex + 1) : ''
+  const isEmailValid =
+    atIndex > 0 &&
+    atIndex === normalizedEmail.lastIndexOf('@') &&
+    !normalizedEmail.includes(' ') &&
+    domain.length > 2 &&
+    domain.includes('.') &&
+    !domain.startsWith('.') &&
+    !domain.endsWith('.')
 
   if (!isValidEmail(email)) {
     return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
