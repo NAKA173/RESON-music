@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Player } from '@/components/Player'
 import { usePlayerQueue } from '@/lib/player/queue'
+import { formatTrackArtistLine, type TrackCredit } from '@/lib/music/credits'
 
 interface LikedTrack {
   id: string
@@ -11,6 +12,9 @@ interface LikedTrack {
   duration_sec: number
   ai_generated: boolean
   artists: { id: string; name: string } | null
+  recording_type?: string
+  content_category?: string
+  credits?: TrackCredit[]
 }
 
 export default function LibraryPage() {
@@ -80,7 +84,7 @@ export default function LibraryPage() {
                         {t.title}
                         {t.ai_generated && <span className="ml-2 text-xs text-yellow-500">AI</span>}
                       </p>
-                      <p className="truncate text-xs text-[var(--dim)]">{t.artists?.name ?? '不明'}</p>
+                      <p className="truncate text-xs text-[var(--dim)]">{formatTrackArtistLine(t.artists?.name, t.credits)}</p>
                     </button>
                     <button onClick={() => queue.addToQueue(t)} title="キューへ追加" className="text-xs text-[var(--faint)] hover:text-[var(--text)]">
                       +キュー

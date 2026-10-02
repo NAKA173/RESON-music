@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Player } from '@/components/Player'
+import { formatTrackArtistLine, type TrackCredit } from '@/lib/music/credits'
 
 interface TrackDetail {
   id: string
@@ -14,6 +15,7 @@ interface TrackDetail {
   album_id: string | null
   artists: { id: string; name: string; founding_artist: boolean } | null
   albums: { id: string; title: string; cover_r2_key: string | null; cover_url: string | null } | null
+  credits?: TrackCredit[]
 }
 
 function TrackDetailContent() {
@@ -61,7 +63,7 @@ function TrackDetailContent() {
           <div>
             <h1 className="font-display text-xl font-bold">{track.title}</h1>
             <p className="mt-1 text-sm text-[var(--dim)] flex items-center gap-1">
-              {track.artists?.name ?? '不明なアーティスト'}
+              {formatTrackArtistLine(track.artists?.name, track.credits)}
               {track.artists?.founding_artist && (
                 <span title="創設アーティスト" className="text-[var(--accent)]">★</span>
               )}
@@ -80,6 +82,7 @@ function TrackDetailContent() {
             title: track.title,
             duration_sec: track.duration_sec,
             artists: track.artists,
+            credits: track.credits,
           }}
         />
       </div>

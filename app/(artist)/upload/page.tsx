@@ -3,6 +3,18 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { computeClientFingerprint } from '@/lib/audio/client-fingerprint'
+import {
+  CONTENT_CATEGORIES,
+  CONTENT_CATEGORY_LABELS,
+  RECORDING_TYPES,
+  RECORDING_TYPE_LABELS,
+  RIGHTS_STATUS_LABELS,
+  RIGHTS_STATUSES,
+  type ContentCategory,
+  type RecordingType,
+  type RightsStatus,
+} from '@/lib/music/metadata'
+import { TRACK_CREDIT_ROLE_LABELS, TRACK_CREDIT_ROLES, type TrackCreditRole } from '@/lib/music/credits'
 
 const ALLOWED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/flac', 'audio/wav', 'audio/ogg']
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -21,6 +33,17 @@ interface Album {
   title: string
   release_type: 'single' | 'ep' | 'album'
   cover_r2_key: string | null
+}
+
+interface CreditDraft {
+  artist_id: string | null
+  display_name: string
+  role: TrackCreditRole
+}
+
+interface ArtistSuggestion {
+  id: string
+  name: string
 }
 
 export default function UploadPage() {
@@ -49,6 +72,21 @@ export default function UploadPage() {
   const [albumCoverDone, setAlbumCoverDone] = useState(false)
   const albumCoverInputRef = useRef<HTMLInputElement>(null)
   const [isrc, setIsrc] = useState('')
+  const [recordingType, setRecordingType] = useState<RecordingType>('original')
+  const [contentCategory, setContentCategory] = useState<ContentCategory>('none')
+  const [sourceTitle, setSourceTitle] = useState('')
+  const [sourceArtistName, setSourceArtistName] = useState('')
+  const [sourceWorkTitle, setSourceWorkTitle] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [rightsStatus, setRightsStatus] = useState<RightsStatus>('original')
+  const [rightsConfirmed, setRightsConfirmed] = useState(false)
+  const [rightsNote, setRightsNote] = useState('')
+  const [credits, setCredits] = useState<CreditDraft[]>([])
+  const [creditName, setCreditName] = useState('')
+  const [creditRole, setCreditRole] = useState<TrackCreditRole>('featured_artist')
+  const [creditArtistId, setCreditArtistId] = useState<string | null>(null)
+  const [creditSearch, setCreditSearch] = useState('')
+  const [artistSuggestions, setArtistSuggestions] = useState<ArtistSuggestion[]>([])
 
   useEffect(() => {
     fetch('/api/genres')
@@ -56,6 +94,20 @@ export default function UploadPage() {
       .then((d) => setGenres(d.genres ?? []))
     loadAlbums()
   }, [])
+
+  useEffect(() => {
+    const query = creditSearch.trim()
+    if (query.length < 2) {
+      setArtistSuggestions([])
+      return
+    }
+    const timer = setTimeout(() => {
+      fetch(`/api/artists/search?q=${encodeURIComponent(query)}`)
+        .then((r) => (r.ok ? r.json() : { artists: [] }))
+        .then((d) => setArtistSuggestions(d.artists ?? []))
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [creditSearch])
 
   function loadAlbums() {
     fetch('/api/albums?mine=true')
@@ -86,6 +138,31 @@ export default function UploadPage() {
       if (prev.length >= MAX_GENRES) return prev
       return [...prev, id]
     })
+  }
+
+  function changeRecordingType(next: RecordingType) {
+    setRecordingType(next)
+    if (next === 'original') {
+      setRightsStatus('original')
+    } else if (rightsStatus === 'original') {
+      setRightsStatus('permission_obtained')
+    }
+  }
+
+  function selectCreditArtist(artist: ArtistSuggestion) {
+    setCreditName(artist.name)
+    setCreditArtistId(artist.id)
+    setCreditSearch('')
+    setArtistSuggestions([])
+  }
+
+  function addCredit() {
+    const displayName = creditName.trim()
+    if (!displayName || credits.length >= 20) return
+    setCredits((prev) => [...prev, { artist_id: creditArtistId, display_name: displayName, role: creditRole }])
+    setCreditName('')
+    setCreditArtistId(null)
+    setCreditSearch('')
   }
 
   const macroGenres = genres.filter((g) => !g.parent_id)
@@ -173,6 +250,10 @@ export default function UploadPage() {
     e.preventDefault()
     if (!file) return
     setError('')
+    if (!rightsConfirmed) {
+      setError('権利確認のチェックが必要です')
+      return
+    }
     setLoading(true)
     setProgress(0)
 
@@ -197,6 +278,16 @@ export default function UploadPage() {
         album_id: albumId || undefined,
         track_number: albumId && trackNumber ? Number(trackNumber) : undefined,
         isrc: isrc || undefined,
+        credits,
+        recording_type: recordingType,
+        content_category: contentCategory,
+        source_title: sourceTitle,
+        source_artist_name: sourceArtistName,
+        source_work_title: sourceWorkTitle,
+        source_url: sourceUrl,
+        rights_status: rightsStatus,
+        rights_confirmed: rightsConfirmed,
+        rights_note: rightsNote,
       }),
     })
     const meta = await metaRes.json()
@@ -365,6 +456,200 @@ export default function UploadPage() {
               className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
             />
           </div>
+
+          {/* 作品・クレジット情報 */}
+          <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+            <div>
+              <h2 className="text-sm font-semibold">作品・クレジット情報</h2>
+              <p className="mt-1 text-xs leading-5 text-zinc-500">
+                feat. や原曲情報をタイトルへ直接書かず、検索・表示できるクレジットとして登録します。
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="recording-type" className="block text-xs text-zinc-400 mb-1">楽曲の種類</label>
+                <select
+                  id="recording-type"
+                  value={recordingType}
+                  onChange={(e) => changeRecordingType(e.target.value as RecordingType)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
+                >
+                  {RECORDING_TYPES.map((type) => <option key={type} value={type}>{RECORDING_TYPE_LABELS[type]}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="content-category" className="block text-xs text-zinc-400 mb-1">関連コンテンツ</label>
+                <select
+                  id="content-category"
+                  value={contentCategory}
+                  onChange={(e) => setContentCategory(e.target.value as ContentCategory)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
+                >
+                  {CONTENT_CATEGORIES.map((category) => <option key={category} value={category}>{CONTENT_CATEGORY_LABELS[category]}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {(recordingType !== 'original' || contentCategory !== 'none') && (
+              <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                {recordingType !== 'original' && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="source-title" className="block text-xs text-zinc-400 mb-1">
+                        原曲・元作品名 {['cover', 'remix', 'arrangement', 'medley'].includes(recordingType) && <span className="text-red-400">*</span>}
+                      </label>
+                      <input
+                        id="source-title"
+                        value={sourceTitle}
+                        onChange={(e) => setSourceTitle(e.target.value)}
+                        maxLength={200}
+                        required={['cover', 'remix', 'arrangement', 'medley'].includes(recordingType)}
+                        placeholder="例：楽曲名／原作タイトル"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="source-artist-name" className="block text-xs text-zinc-400 mb-1">原アーティスト名（任意）</label>
+                      <input
+                        id="source-artist-name"
+                        value={sourceArtistName}
+                        onChange={(e) => setSourceArtistName(e.target.value)}
+                        maxLength={200}
+                        placeholder="例：原曲の作家・歌唱者"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                      />
+                    </div>
+                  </div>
+                )}
+                {contentCategory !== 'none' && (
+                  <div>
+                    <label htmlFor="source-work-title" className="block text-xs text-zinc-400 mb-1">作品・コンテンツ名 <span className="text-red-400">*</span></label>
+                    <input
+                      id="source-work-title"
+                      value={sourceWorkTitle}
+                      onChange={(e) => setSourceWorkTitle(e.target.value)}
+                      maxLength={200}
+                      required
+                      placeholder="例：作品名／ゲームタイトル／配信者名"
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                    />
+                  </div>
+                )}
+                {recordingType !== 'original' && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="rights-status" className="block text-xs text-zinc-400 mb-1">権利状態</label>
+                      <select
+                        id="rights-status"
+                        value={rightsStatus}
+                        onChange={(e) => setRightsStatus(e.target.value as RightsStatus)}
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
+                      >
+                        {RIGHTS_STATUSES.filter((status) => status !== 'original').map((status) => <option key={status} value={status}>{RIGHTS_STATUS_LABELS[status]}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="source-url" className="block text-xs text-zinc-400 mb-1">参照URL（任意）</label>
+                      <input
+                        id="source-url"
+                        type="url"
+                        value={sourceUrl}
+                        onChange={(e) => setSourceUrl(e.target.value)}
+                        maxLength={500}
+                        placeholder="https://…"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                      />
+                    </div>
+                  </div>
+                )}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rightsConfirmed}
+                    onChange={(e) => setRightsConfirmed(e.target.checked)}
+                    required
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded accent-white"
+                  />
+                  <span className="text-xs leading-5 text-zinc-400">
+                    この音源を配信するために必要な権利・許諾を確認済みです。RESONは権利許諾を代行しません。
+                  </span>
+                </label>
+                <textarea
+                  aria-label="権利確認メモ"
+                  value={rightsNote}
+                  onChange={(e) => setRightsNote(e.target.value)}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder="運営審査向けの補足（任意）"
+                  className="w-full resize-none bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                />
+              </div>
+            )}
+
+            {recordingType === 'original' && (
+              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                <input
+                  type="checkbox"
+                  checked={rightsConfirmed}
+                  onChange={(e) => setRightsConfirmed(e.target.checked)}
+                  required
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded accent-white"
+                />
+                <span className="text-xs leading-5 text-zinc-400">自分または所属先が、この音源を配信するために必要な権利を保有していることを確認しました。</span>
+              </label>
+            )}
+
+            <div className="border-t border-zinc-800 pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-semibold text-zinc-300">参加者クレジット</h3>
+                  <p className="mt-1 text-[11px] text-zinc-600">feat.、ボーカル、作曲、イラストなどを登録できます。</p>
+                </div>
+                <span className="text-[11px] text-zinc-600">{credits.length}/20</span>
+              </div>
+              {credits.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {credits.map((credit, index) => (
+                    <div key={`${credit.display_name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs">
+                      <span className="min-w-0 truncate"><span className="text-zinc-500">{TRACK_CREDIT_ROLE_LABELS[credit.role]}</span>　{credit.display_name}</span>
+                      <button type="button" onClick={() => setCredits((prev) => prev.filter((_, i) => i !== index))} className="shrink-0 text-zinc-500 underline hover:text-white">削除</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
+                <select
+                  aria-label="クレジットの役割"
+                  value={creditRole}
+                  onChange={(e) => setCreditRole(e.target.value as TrackCreditRole)}
+                  className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-zinc-400"
+                >
+                  {TRACK_CREDIT_ROLES.map((role) => <option key={role} value={role}>{TRACK_CREDIT_ROLE_LABELS[role]}</option>)}
+                </select>
+                <div className="relative">
+                  <input
+                    aria-label="クレジット表示名"
+                    value={creditName}
+                    onChange={(e) => { setCreditName(e.target.value); setCreditArtistId(null); setCreditSearch(e.target.value) }}
+                    maxLength={100}
+                    placeholder="表示名（未登録の名前も可）"
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                  />
+                  {artistSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+                      {artistSuggestions.map((artist) => (
+                        <button key={artist.id} type="button" onClick={() => selectCreditArtist(artist)} className="block w-full px-3 py-2 text-left text-xs hover:bg-zinc-800">
+                          {artist.name}<span className="ml-2 text-zinc-600">RESONアーティスト</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button type="button" onClick={addCredit} disabled={!creditName.trim() || credits.length >= 20} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs hover:border-zinc-400 disabled:opacity-40">追加</button>
+              </div>
+            </div>
+          </section>
 
           {/* ISRC */}
           <div>
