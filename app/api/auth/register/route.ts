@@ -1,10 +1,36 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+function isValidEmail(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  if (value.length > 254) return false
+  if (value.includes(' ') || value.includes('\t') || value.includes('\n') || value.includes('\r')) return false
+
+  const atIndex = value.indexOf('@')
+  if (atIndex <= 0 || atIndex !== value.lastIndexOf('@')) return false
+
+  const local = value.slice(0, atIndex)
+  const domain = value.slice(atIndex + 1)
+  if (!local || !domain || domain.startsWith('.') || domain.endsWith('.')) return false
+
+  return domain.includes('.')
+}
+
 export async function POST(req: NextRequest) {
   const { email, password, ref } = await req.json()
+  const normalizedEmail = typeof email === 'string' ? email.trim() : ''
+  const atIndex = normalizedEmail.indexOf('@')
+  const domain = atIndex >= 0 ? normalizedEmail.slice(atIndex + 1) : ''
+  const isEmailValid =
+    atIndex > 0 &&
+    atIndex === normalizedEmail.lastIndexOf('@') &&
+    !normalizedEmail.includes(' ') &&
+    domain.length > 2 &&
+    domain.includes('.') &&
+    !domain.startsWith('.') &&
+    !domain.endsWith('.')
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!isValidEmail(email)) {
     return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
   }
   if (!password || password.length < 8) {
