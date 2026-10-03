@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import MessagesPage from '../../app/(player)/messages/page'
+import MessagesPage from '../../app/[locale]/(player)/messages/page'
 
 const conversations = [
   {

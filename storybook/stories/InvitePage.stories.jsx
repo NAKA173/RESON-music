@@ -1,5 +1,5 @@
 import React from 'react'
-import InvitePage from '../../app/(player)/invite/page'
+import InvitePage from '../../app/[locale]/(player)/invite/page'
 
 const meta = {
   title: 'Pages/Account/Invite',

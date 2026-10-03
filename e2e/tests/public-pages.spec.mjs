@@ -39,6 +39,35 @@ test.describe('public pages', () => {
     await expect(page).toHaveURL(/\/login$/)
   })
 
+
+  test('language switcher moves between Japanese and English routes', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByRole('link', { name: '英語に切り替える' }).click()
+    await expect(page).toHaveURL(/\/en\/?$/)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Listening should')
+
+    await page.getByRole('link', { name: 'Switch to Japanese' }).click()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('聴くことが、そのまま')
+  })
+
+  test('English locale renders translated landing and auth navigation', async ({ page }) => {
+    await page.goto('/en')
+
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Listening should')
+    await expect(page.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/en/login')
+
+    await page.getByRole('link', { name: 'Log in' }).click()
+    await expect(page).toHaveURL(/\/en\/login$/)
+    await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible()
+  })
+
+  test('default locale prefix redirects to the canonical prefixless URL', async ({ page }) => {
+    await page.goto('/ja/login')
+    await expect(page).toHaveURL(/\/login$/)
+  })
+
   test('middleware applies baseline security headers to public pages', async ({ request }) => {
     const response = await request.get('/')
 

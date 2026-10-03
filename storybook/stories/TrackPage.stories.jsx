@@ -1,5 +1,5 @@
 import React from 'react'
-import TrackPage from '../../app/(player)/track/page'
+import TrackPage from '../../app/[locale]/(player)/track/page'
 
 const meta = {
   title: 'Pages/Music/TrackDetail',

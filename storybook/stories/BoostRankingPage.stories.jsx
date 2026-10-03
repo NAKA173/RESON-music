@@ -1,5 +1,5 @@
 import React from 'react'
-import BoostRankingPage from '../../app/(player)/boost-ranking/page'
+import BoostRankingPage from '../../app/[locale]/(player)/boost-ranking/page'
 
 const meta = {
   title: 'Pages/Discovery/BoostRanking',

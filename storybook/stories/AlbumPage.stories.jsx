@@ -1,5 +1,5 @@
 import React from 'react'
-import AlbumDetailPage from '../../app/(player)/albums/page'
+import AlbumDetailPage from '../../app/[locale]/(player)/albums/page'
 
 const playerMocks = {
   'GET /api/boost': {

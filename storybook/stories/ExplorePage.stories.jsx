@@ -1,5 +1,5 @@
 import React from 'react'
-import ExplorePage from '../../app/(player)/explore/page'
+import ExplorePage from '../../app/[locale]/(player)/explore/page'
 
 const meta = {
   title: 'Pages/Listener/Explore',

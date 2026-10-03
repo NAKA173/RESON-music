@@ -1,5 +1,5 @@
 import React from 'react'
-import AdminPrivacyRequestsPage from '../../app/(admin)/admin/privacy-requests/page'
+import AdminPrivacyRequestsPage from '../../app/[locale]/(admin)/admin/privacy-requests/page'
 
 const meta = {
   title: 'Pages/Admin/PrivacyRequests',

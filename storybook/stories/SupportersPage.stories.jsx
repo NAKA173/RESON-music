@@ -1,5 +1,5 @@
 import React from 'react'
-import SupportersPage from '../../app/(artist)/supporters/page'
+import SupportersPage from '../../app/[locale]/(artist)/supporters/page'
 
 const meta = {
   title: 'Pages/Artist/Supporters',

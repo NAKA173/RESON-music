@@ -92,13 +92,13 @@ export const ApiError = {
     mockApi: {
       'POST /api/supports': {
         status: 500,
-        body: { error: '応援の記録に失敗しました' },
+        body: { code: 'support_failed' },
       },
     },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: /応援$/ }))
-    await expect(canvas.getByText('応援の記録に失敗しました')).toBeVisible()
+    await expect(canvas.getByText('応援の処理に失敗しました。もう一度お試しください。')).toBeVisible()
   },
 }

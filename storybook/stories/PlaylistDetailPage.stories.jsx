@@ -1,5 +1,5 @@
 import React from 'react'
-import PlaylistDetailPage from '../../app/(player)/playlists/detail/page'
+import PlaylistDetailPage from '../../app/[locale]/(player)/playlists/detail/page'
 
 const track = (id, title, artist) => ({
   position: Number(id.slice(-1)) || 0,

@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import PricingPage from '../../app/(player)/pricing/page'
+import PricingPage from '../../app/[locale]/(player)/pricing/page'
 
 const checkoutMocks = {
   'POST /api/stripe/checkout': {
@@ -60,7 +60,7 @@ export const StudentVerificationError = {
       ...checkoutMocks,
       'POST /api/student/verify/request': {
         status: 400,
-        body: { error: '.ed.jp の学校メールを入力してください' },
+        body: { code: 'invalid_school_email' },
       },
     },
   },
@@ -69,7 +69,7 @@ export const StudentVerificationError = {
     await userEvent.click(canvas.getByRole('button', { name: 'Student に登録' }))
     await userEvent.type(canvas.getByLabelText('学校発行のメールアドレス'), 'student@example.com')
     await userEvent.click(canvas.getByRole('button', { name: '認証コードを送信' }))
-    await expect(canvas.getByRole('alert')).toHaveTextContent('.ed.jp の学校メールを入力してください')
+    await expect(canvas.getByRole('alert')).toHaveTextContent('認証コードを送信できませんでした。学校のメールアドレスを確認してもう一度お試しください。')
   },
 }
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect } from 'storybook/test'
-import HomePage from '../../app/(player)/home/page'
+import HomePage from '../../app/[locale]/(player)/home/page'
 
 const tracks = [
   { id: 'home-track-1', title: 'Home Track One', duration_sec: 210, ai_generated: false, cumulative_plays: 1200, artists: { id: 'artist-1', name: 'Home Artist' } },

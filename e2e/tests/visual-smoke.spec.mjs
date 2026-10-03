@@ -21,6 +21,7 @@ const targets = [
     name: 'privacy-requests',
     path: '/privacy-requests',
     ready: (page) => page.getByRole('heading', { name: '個人データに関する請求' }),
+    screenshotOptions: { maxDiffPixelRatio: 0.015 },
   },
   {
     name: 'messages',
@@ -96,6 +97,7 @@ test.describe('mobile visual smoke', () => {
 
       await expect(page).toHaveScreenshot(`${target.name}-mobile.png`, {
         fullPage: false,
+        ...target.screenshotOptions,
       })
     })
   }

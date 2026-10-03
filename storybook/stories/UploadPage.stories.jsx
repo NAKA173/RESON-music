@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import UploadPage from '../../app/(artist)/upload/page'
+import UploadPage from '../../app/[locale]/(artist)/upload/page'
 
 const emptyMocks = {
   'GET /api/genres': { body: { genres: [] } },

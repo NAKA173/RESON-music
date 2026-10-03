@@ -1,5 +1,5 @@
 import React from 'react'
-import ParentalPage from '../../app/(player)/parental/page'
+import ParentalPage from '../../app/[locale]/(player)/parental/page'
 
 const meta = {
   title: 'Pages/Account/Parental',

@@ -1,5 +1,5 @@
 import React from 'react'
-import CuratorsPage from '../../app/(player)/curators/page'
+import CuratorsPage from '../../app/[locale]/(player)/curators/page'
 
 const meta = {
   title: 'Pages/Discovery/Curators',
