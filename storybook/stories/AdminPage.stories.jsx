@@ -1,5 +1,5 @@
 import React from 'react'
-import AdminPage from '../../app/(admin)/admin/page'
+import AdminPage from '../../app/[locale]/(admin)/admin/page'
 
 const baseMocks = {
   'GET /api/admin/artists': {

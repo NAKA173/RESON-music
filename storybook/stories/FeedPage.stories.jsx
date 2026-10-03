@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import FeedPage from '../../app/(player)/feed/page'
+import FeedPage from '../../app/[locale]/(player)/feed/page'
 
 const post = {
   id: 'post-storybook',
@@ -65,7 +65,7 @@ export const PostFailure = {
       'GET /api/posts': { body: { posts: [] } },
       'POST /api/posts': {
         status: 500,
-        body: { error: '投稿できませんでした' },
+        body: { code: 'post_failed' },
       },
     },
   },
@@ -73,7 +73,7 @@ export const PostFailure = {
     const canvas = within(canvasElement)
     await userEvent.type(canvas.getByLabelText('投稿内容'), '送信失敗を確認する投稿')
     await userEvent.click(canvas.getByRole('button', { name: '投稿する' }))
-    await expect(canvas.getByText('投稿できませんでした')).toBeVisible()
+    await expect(canvas.getByText('投稿できませんでした。もう一度お試しください。')).toBeVisible()
   },
 }
 

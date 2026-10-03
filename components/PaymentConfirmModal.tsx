@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Elements,
   PaymentElement,
@@ -17,6 +18,7 @@ interface PaymentConfirmModalProps {
 }
 
 export function PaymentConfirmModal({ clientSecret, title, onSuccess, onClose }: PaymentConfirmModalProps) {
+  const t = useTranslations('Payment')
   const dialogRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
@@ -73,7 +75,7 @@ export function PaymentConfirmModal({ clientSecret, title, onSuccess, onClose }:
       >
         <div className="flex items-center justify-between">
           <h3 id="payment-confirm-title" className="text-sm font-semibold">{title}</h3>
-          <button autoFocus onClick={onClose} aria-label="決済ダイアログを閉じる" className="text-zinc-500 hover:text-white">✕</button>
+          <button autoFocus onClick={onClose} aria-label={t('closeDialog')} className="text-zinc-500 hover:text-white">✕</button>
         </div>
         <Elements stripe={getStripeClient()} options={{ clientSecret }}>
           <ConfirmForm onSuccess={onSuccess} onClose={onClose} />
@@ -84,6 +86,7 @@ export function PaymentConfirmModal({ clientSecret, title, onSuccess, onClose }:
 }
 
 function ConfirmForm({ onSuccess, onClose }: { onSuccess: () => void; onClose: () => void }) {
+  const t = useTranslations('Payment')
   const stripe = useStripe()
   const elements = useElements()
   const [submitting, setSubmitting] = useState(false)
@@ -100,7 +103,7 @@ function ConfirmForm({ onSuccess, onClose }: { onSuccess: () => void; onClose: (
     })
     setSubmitting(false)
     if (confirmError) {
-      setError(confirmError.message ?? '決済に失敗しました')
+      setError(t('failed'))
       return
     }
     onSuccess()
@@ -116,7 +119,7 @@ function ConfirmForm({ onSuccess, onClose }: { onSuccess: () => void; onClose: (
         disabled={!stripe || submitting}
         className="w-full rounded-lg bg-white py-2.5 text-sm font-semibold text-black hover:bg-zinc-200 disabled:opacity-40"
       >
-        {submitting ? '処理中…' : '支払う'}
+        {submitting ? t('processing') : t('pay')}
       </button>
     </form>
   )

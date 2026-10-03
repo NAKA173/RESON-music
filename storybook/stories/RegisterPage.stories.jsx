@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import RegisterPage from '../../app/(auth)/register/page'
+import RegisterPage from '../../app/[locale]/(auth)/register/page'
 
 const successMocks = {
   'POST /api/auth/register': {
@@ -56,7 +56,7 @@ export const RegistrationApiFailure = {
     mockApi: {
       'POST /api/auth/register': {
         status: 409,
-        body: { error: 'このメールアドレスは登録済みです' },
+        body: { code: 'account_creation_failed' },
       },
     },
   },
@@ -64,7 +64,7 @@ export const RegistrationApiFailure = {
     const canvas = within(canvasElement)
     await fillAccount(canvas)
     await userEvent.click(canvas.getByRole('button', { name: 'アカウントを作成' }))
-    await expect(await canvas.findByRole('alert')).toHaveTextContent('このメールアドレスは登録済みです')
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('登録を完了できませんでした。時間をおいて再試行してください。')
   },
 }
 

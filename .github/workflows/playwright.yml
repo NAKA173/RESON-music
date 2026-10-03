@@ -69,9 +69,13 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}"
             echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
             echo "ENABLE_DEV_SEED_ACCOUNT=true"
+            echo "E2E_ALLOW_DEV_SEED_ACCOUNT=true"
             echo "CRON_SECRET=e2e-local-cron-secret"
             echo "E2E_CRON_SECRET=e2e-local-cron-secret"
           } >> "$GITHUB_ENV"
+
+      - name: Build application for E2E
+        run: npm run build
 
       - name: Run Playwright tests
         working-directory: e2e

@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import ProfilePage from '../../app/(player)/profile/page'
+import ProfilePage from '../../app/[locale]/(player)/profile/page'
 
 const profile = {
   display_name: 'Storybook Listener',

@@ -44,3 +44,13 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Build static locale preview
+        run: ./scripts/build-static-preview.sh
+
+      - name: Verify static locale output
+        shell: bash
+        run: |
+          test -f out/index.html
+          test -f out/en/index.html
+          test ! -d out/ja

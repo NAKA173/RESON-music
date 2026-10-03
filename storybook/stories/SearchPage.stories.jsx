@@ -1,5 +1,5 @@
 import React from 'react'
-import SearchPage from '../../app/(player)/search/page'
+import SearchPage from '../../app/[locale]/(player)/search/page'
 
 const meta = {
   title: 'Pages/Listener/Search',

@@ -1,5 +1,5 @@
 import React from 'react'
-import NotificationsPage from '../../app/(player)/notifications/page'
+import NotificationsPage from '../../app/[locale]/(player)/notifications/page'
 
 const meta = {
   title: 'Pages/Social/Notifications',

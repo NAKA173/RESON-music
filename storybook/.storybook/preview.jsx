@@ -38,7 +38,7 @@ export const decorators = [
     }
 
     return (
-      <NextIntlClientProvider locale="ja" messages={jaMessages}>
+      <NextIntlClientProvider locale="ja" messages={jaMessages} timeZone="Asia/Tokyo">
         <div className="min-h-screen bg-[var(--bg)] p-8 text-[var(--text)]">
           <Story />
         </div>

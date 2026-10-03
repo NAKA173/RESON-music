@@ -1,5 +1,5 @@
 import React from 'react'
-import WrappedPage from '../../app/(player)/wrapped/page'
+import WrappedPage from '../../app/[locale]/(player)/wrapped/page'
 
 const meta = {
   title: 'Pages/Listener/Wrapped',

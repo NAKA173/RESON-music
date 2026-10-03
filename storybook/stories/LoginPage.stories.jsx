@@ -1,5 +1,5 @@
 import React from 'react'
-import LoginPage from '../../app/(auth)/login/page'
+import LoginPage from '../../app/[locale]/(auth)/login/page'
 
 const meta = {
   title: 'Pages/Auth/Login',

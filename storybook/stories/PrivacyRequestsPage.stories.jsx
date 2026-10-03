@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import PrivacyRequestsPage from '../../app/(player)/privacy-requests/page'
+import PrivacyRequestsPage from '../../app/[locale]/(player)/privacy-requests/page'
 
 const meta = {
   title: 'Pages/Account/PrivacyRequests',
@@ -64,14 +64,14 @@ export const SubmitFailure = {
       'GET /api/privacy/requests': { body: { requests: [] } },
       'POST /api/privacy/requests': {
         status: 500,
-        body: { error: '請求を送信できませんでした' },
+        body: { code: 'privacy_request_failed' },
       },
     },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: '請求を送信する' }))
-    await expect(await canvas.findByRole('alert')).toHaveTextContent('請求を送信できませんでした')
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('送信できませんでした')
   },
 }
 

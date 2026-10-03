@@ -1,5 +1,5 @@
 import React from 'react'
-import LibraryPage from '../../app/(player)/library/page'
+import LibraryPage from '../../app/[locale]/(player)/library/page'
 
 const playerMocks = {
   'GET /api/boost': {

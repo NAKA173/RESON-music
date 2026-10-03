@@ -1,5 +1,5 @@
 import React from 'react'
-import EventsPage from '../../app/(player)/events/page'
+import EventsPage from '../../app/[locale]/(player)/events/page'
 
 const meta = {
   title: 'Pages/Social/Events',

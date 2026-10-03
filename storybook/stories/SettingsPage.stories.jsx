@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import SettingsPage from '../../app/(player)/settings/page'
+import SettingsPage from '../../app/[locale]/(player)/settings/page'
 
 const settings = {
   is_private: false,

@@ -1,5 +1,5 @@
 import React from 'react'
-import CommunitiesPage from '../../app/(player)/communities/page'
+import CommunitiesPage from '../../app/[locale]/(player)/communities/page'
 
 const meta = {
   title: 'Pages/Social/Communities',

@@ -1,6 +1,6 @@
 import React from 'react'
 import { expect, userEvent, within } from 'storybook/test'
-import DashboardPage from '../../app/(artist)/dashboard/page'
+import DashboardPage from '../../app/[locale]/(artist)/dashboard/page'
 
 const report = {
   artist: {

@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { PaymentConfirmModal } from './PaymentConfirmModal'
 
 const TIP_PRESETS = [100, 300, 500, 1000]
 
 export function SupportButton({ trackId }: { trackId: string }) {
+  const t = useTranslations('Player.support')
   const [hearted, setHearted] = useState(false)
   const [showTipForm, setShowTipForm] = useState(false)
   const [tipAmount, setTipAmount] = useState(TIP_PRESETS[0])
@@ -65,8 +67,7 @@ export function SupportButton({ trackId }: { trackId: string }) {
       body: JSON.stringify({ track_id: trackId }),
     })
     if (!res.ok) {
-      const data = await res.json()
-      setError(data.error)
+      setError(t('failed'))
       return
     }
     setHearted(true)
@@ -83,7 +84,7 @@ export function SupportButton({ trackId }: { trackId: string }) {
     })
     const data = await res.json()
     setLoading(false)
-    if (!res.ok) { setError(data.error); return }
+    if (!res.ok) { setError(t('failed')); return }
 
     if (data.type === 'tip_deferred') {
       // Support+ は月末蓄積精算のため即時決済不要
@@ -106,18 +107,18 @@ export function SupportButton({ trackId }: { trackId: string }) {
     <div className="inline-flex items-center gap-2">
       <button
         onClick={sendHeart}
-        title="応援する（❤️・無制限・無料）"
+        title={t('supportTitle')}
         className="flex items-center gap-1 rounded-full border border-zinc-700 px-3 py-1 text-xs hover:border-zinc-400"
       >
-        ❤️ {hearted ? '応援しました' : '応援'}
+        ❤️ {hearted ? t('supported') : t('support')}
       </button>
       <button
         ref={tipTriggerRef}
         onClick={() => setShowTipForm((v) => !v)}
-        title="投げ銭（最低100円）"
+        title={t('tipTitle')}
         className="flex items-center gap-1 rounded-full border border-zinc-700 px-3 py-1 text-xs hover:border-zinc-400"
       >
-        💴 {tipSent ? '送りました' : '投げ銭'}
+        💴 {tipSent ? t('sent') : t('tip')}
       </button>
       {error && <span className="text-xs text-red-400">{error}</span>}
 
@@ -136,11 +137,11 @@ export function SupportButton({ trackId }: { trackId: string }) {
             className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-5 space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 id="support-tip-title" className="text-sm font-semibold">投げ銭する</h3>
+              <h3 id="support-tip-title" className="text-sm font-semibold">{t('dialogTitle')}</h3>
               <button
                 autoFocus
                 onClick={() => setShowTipForm(false)}
-                aria-label="投げ銭ダイアログを閉じる"
+                aria-label={t('closeDialog')}
                 className="text-zinc-500 hover:text-white"
               >
                 ✕
@@ -165,7 +166,7 @@ export function SupportButton({ trackId }: { trackId: string }) {
               disabled={loading}
               className="w-full rounded-lg bg-white py-2.5 text-sm font-semibold text-black hover:bg-zinc-200 disabled:opacity-40"
             >
-              {loading ? '準備中…' : `¥${tipAmount} を送る`}
+              {loading ? t('preparing') : t('sendAmount', { amount: tipAmount })}
             </button>
           </div>
         </div>
@@ -174,7 +175,7 @@ export function SupportButton({ trackId }: { trackId: string }) {
       {clientSecret && (
         <PaymentConfirmModal
           clientSecret={clientSecret}
-          title={`投げ銭（¥${tipAmount}）`}
+          title={t('paymentTitle', { amount: tipAmount })}
           onSuccess={onTipSuccess}
           onClose={() => setClientSecret(null)}
         />

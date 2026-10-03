@@ -25,6 +25,7 @@ const nextConfig: NextConfig = isStaticPreview
   ? {
       output: "export",
       basePath: "/RESON-music",
+      trailingSlash: true,
       images: { unoptimized: true },
       headers,
     }
