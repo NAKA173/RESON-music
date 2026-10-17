@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Storybook dependencies
         working-directory: storybook
-        run: npm ci --no-audit --no-fund
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Install Chromium for Storybook tests
         working-directory: storybook
