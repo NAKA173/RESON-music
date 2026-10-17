@@ -86,8 +86,7 @@ export default function LibraryPage() {
                         {t.title}
                         {t.ai_generated && <span className="ml-2 text-xs text-yellow-500">AI</span>}
                       </p>
-<<<<<<< HEAD:app/[locale]/(player)/library/page.tsx
-                      <p className="truncate text-xs text-[var(--dim)]">{formatTrackArtistLine(t.artists?.name, t.credits) || tr('unknownArtist')}</p>
+                      <p className="truncate text-xs text-[var(--dim)]">{formatTrackArtistLine(t.artists?.name, t.credits, tr('unknownArtist'))}</p>
                     </button>
                     <button onClick={() => queue.addToQueue(t)} title={tr('addQueueTitle')} className="text-xs text-[var(--faint)] hover:text-[var(--text)]">
                       {tr('addQueue')}

@@ -7,7 +7,7 @@ import { useFormatter, useTranslations } from 'next-intl'
 import { Player } from '@/components/Player'
 import { usePlayerQueue } from '@/lib/player/queue'
 import type { TrackCredit } from '@/lib/music/credits'
-import { RECORDING_TYPE_LABELS, type RecordingType } from '@/lib/music/metadata'
+import type { RecordingType } from '@/lib/music/metadata'
 
 interface AlbumTrack {
   id: string
@@ -38,6 +38,7 @@ interface AlbumDetail {
 
 function AlbumDetailContent() {
   const t = useTranslations('Album')
+  const metadataT = useTranslations('MusicMetadata')
   const format = useFormatter()
   const searchParams = useSearchParams()
   const albumId = searchParams.get('id') ?? ''
@@ -143,7 +144,7 @@ function AlbumDetailContent() {
                     {track.title}
                     {track.ai_generated && <span className="ml-2 text-xs text-yellow-500">AI</span>}
                     {track.recording_type && track.recording_type !== 'original' && (
-                      <span className="ml-2 text-xs text-[var(--accent)]">{RECORDING_TYPE_LABELS[track.recording_type as RecordingType] ?? track.recording_type}</span>
+                      <span className="ml-2 text-xs text-[var(--accent)]">{metadataT(`recordingTypes.${track.recording_type as RecordingType}`)}</span>
                     )}
                   </span>
                 </div>

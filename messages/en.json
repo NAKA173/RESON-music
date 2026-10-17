@@ -349,7 +349,16 @@
     "title": "Contextual search is coming soon",
     "description": "We're building search that understands natural phrases such as “music for late at night.” Until then, please use track-name search.",
     "backHome": "Back to Home",
-    "tryExplore": "Try Explore mode"
+    "tryExplore": "Try Explore mode",
+    "catalogTitle": "Search tracks",
+    "catalogBack": "Home",
+    "catalogLabel": "Search tracks, artists, and works",
+    "catalogPlaceholder": "Search by track, artist, work, or character",
+    "catalogHint": "Search also covers featured artists, source tracks, anime, games, and related works.",
+    "catalogLoading": "Searching…",
+    "catalogEmpty": "No matching tracks",
+    "catalogPrompt": "Enter a search term",
+    "unknownArtist": "Unknown artist"
   },
   "Explore": {
     "backHome": "Back to Home",
@@ -964,7 +973,10 @@
       "album": "Album"
     },
     "invite": "Invite friends",
-    "pricing": "View the distribution formula"
+    "pricing": "View the distribution formula",
+    "metadata": {
+      "saveFailed": "Could not save work information. Please try again."
+    }
   },
   "Upload": {
     "validation": {
@@ -1051,7 +1063,14 @@
       "ai": "AI-generated",
       "unknown": "Unknown",
       "approve": "Approve",
-      "reject": "Reject"
+      "reject": "Reject",
+      "rightsConfirmed": "Rights confirmed",
+      "rightsNotConfirmed": "Rights not confirmed",
+      "source": "Source",
+      "notEntered": "Not entered",
+      "work": "Work",
+      "note": "Note",
+      "credits": "Credits"
     },
     "fraud": {
       "empty": "No unresolved fraud flags",
@@ -1079,6 +1098,76 @@
       "badge": "★ Founding artist",
       "remove": "Remove badge",
       "add": "Add badge"
+    }
+  },
+  "MusicMetadata": {
+    "sectionTitle": "Work and credit information",
+    "sectionDescription": "Record source works and contributors separately from the title for search and display.",
+    "edit": "Work info",
+    "recordingType": "Recording type",
+    "contentCategory": "Related content",
+    "sourceTitle": "Original track or source work",
+    "sourceTitlePlaceholder": "Track title or source work",
+    "sourceArtistName": "Original artist (optional)",
+    "sourceArtistNamePlaceholder": "Writer or performer of the original track",
+    "sourceWorkTitle": "Related work or content",
+    "sourceWorkTitlePlaceholder": "Work, game, or creator name",
+    "sourceUrl": "Reference URL (optional)",
+    "rightsStatus": "Rights status",
+    "rightsNotice": "I have confirmed the rights and permissions needed to distribute this recording. RESON does not obtain licenses for you.",
+    "rightsConfirmedOriginal": "I or my organization hold the rights required to distribute this recording.",
+    "rightsRequired": "Confirm the rights and permissions required to distribute this recording.",
+    "rightsNote": "Rights review note",
+    "rightsNotePlaceholder": "Additional information for the review team (optional)",
+    "credits": "Contributor credits",
+    "creditsDescription": "Add featured artists, vocalists, composers, illustrators, and more.",
+    "creditRole": "Credit role",
+    "creditName": "Credit display name",
+    "displayNamePlaceholder": "Display name (including people not registered on RESON)",
+    "registeredArtist": "RESON artist",
+    "remove": "Remove",
+    "add": "Add",
+    "addCredit": "＋Add credit",
+    "save": "Save work information",
+    "saving": "Saving…",
+    "close": "Close",
+    "reReviewNote": "Tracks with changed work information or credits will be reviewed again.",
+    "recordingTypes": {
+      "original": "Original",
+      "cover": "Cover",
+      "remix": "Remix",
+      "arrangement": "Arrangement",
+      "medley": "Medley",
+      "live": "Live or streaming recording",
+      "instrumental": "Instrumental"
+    },
+    "contentCategories": {
+      "none": "General music",
+      "anime": "Anime",
+      "game": "Game",
+      "visual_novel": "Visual novel",
+      "vtuber": "VTuber or streamer",
+      "virtual_character": "Virtual character",
+      "voice_synth": "Voice synthesis",
+      "other": "Other related content"
+    },
+    "rightsStatuses": {
+      "original": "Original work or rights owned",
+      "permission_obtained": "Required permission confirmed",
+      "public_domain": "Public domain"
+    },
+    "creditRoles": {
+      "featured_artist": "Featured artist",
+      "vocalist": "Vocalist",
+      "composer": "Composer",
+      "lyricist": "Lyricist",
+      "arranger": "Arranger",
+      "producer": "Producer",
+      "remixer": "Remixer",
+      "illustrator": "Illustrator",
+      "character": "Character",
+      "voice_actor": "Voice actor or performer",
+      "original_artist": "Original artist"
     }
   }
 }

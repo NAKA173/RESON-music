@@ -349,7 +349,16 @@
     "title": "文脈検索は準備中です",
     "description": "「夜に聴きたい曲」のような自然な言葉で楽曲を探せる機能を準備しています。それまでは楽曲名での検索をご利用ください。",
     "backHome": "ホームへ戻る",
-    "tryExplore": "探索モードを試す"
+    "tryExplore": "探索モードを試す",
+    "catalogTitle": "楽曲を検索",
+    "catalogBack": "ホームへ",
+    "catalogLabel": "楽曲・アーティスト・作品を検索",
+    "catalogPlaceholder": "楽曲・アーティスト・作品・キャラクターで検索",
+    "catalogHint": "feat.参加者、カバー元、アニメ・ゲームなどの関連作品も検索できます。",
+    "catalogLoading": "検索中…",
+    "catalogEmpty": "該当する楽曲が見つかりません",
+    "catalogPrompt": "検索語を入力してください",
+    "unknownArtist": "不明なアーティスト"
   },
   "Explore": {
     "backHome": "ホームへ戻る",
@@ -964,7 +973,10 @@
       "album": "アルバム"
     },
     "invite": "友人を招待する",
-    "pricing": "分配計算式はこちらで公開しています"
+    "pricing": "分配計算式はこちらで公開しています",
+    "metadata": {
+      "saveFailed": "作品情報を保存できませんでした。もう一度お試しください。"
+    }
   },
   "Upload": {
     "validation": {
@@ -1051,7 +1063,14 @@
       "ai": "AI生成",
       "unknown": "不明",
       "approve": "承認",
-      "reject": "却下"
+      "reject": "却下",
+      "rightsConfirmed": "権利確認済み",
+      "rightsNotConfirmed": "権利確認なし",
+      "source": "参照元",
+      "notEntered": "未入力",
+      "work": "作品",
+      "note": "メモ",
+      "credits": "クレジット"
     },
     "fraud": {
       "empty": "未解決の不正検知フラグはありません",
@@ -1079,6 +1098,76 @@
       "badge": "★ 創設アーティスト",
       "remove": "解除する",
       "add": "バッジを付与"
+    }
+  },
+  "MusicMetadata": {
+    "sectionTitle": "作品・クレジット情報",
+    "sectionDescription": "原曲や参加者をタイトルと分けて登録し、検索や表示に使います。",
+    "edit": "作品情報",
+    "recordingType": "楽曲の種類",
+    "contentCategory": "関連コンテンツ",
+    "sourceTitle": "原曲・元作品名",
+    "sourceTitlePlaceholder": "例：楽曲名／原作タイトル",
+    "sourceArtistName": "原アーティスト名（任意）",
+    "sourceArtistNamePlaceholder": "例：原曲の作家・歌唱者",
+    "sourceWorkTitle": "作品・コンテンツ名",
+    "sourceWorkTitlePlaceholder": "例：作品名／ゲームタイトル／配信者名",
+    "sourceUrl": "参照URL（任意）",
+    "rightsStatus": "権利状態",
+    "rightsNotice": "この音源を配信するために必要な権利・許諾を確認済みです。RESONは権利許諾を代行しません。",
+    "rightsConfirmedOriginal": "自分または所属先が、この音源を配信するために必要な権利を保有していることを確認しました。",
+    "rightsRequired": "配信に必要な権利・許諾を確認してください。",
+    "rightsNote": "権利確認メモ",
+    "rightsNotePlaceholder": "運営審査向けの補足（任意）",
+    "credits": "参加者クレジット",
+    "creditsDescription": "feat.、ボーカル、作曲、イラストなどを登録できます。",
+    "creditRole": "クレジットの役割",
+    "creditName": "クレジット表示名",
+    "displayNamePlaceholder": "表示名（未登録の名前も可）",
+    "registeredArtist": "RESONアーティスト",
+    "remove": "削除",
+    "add": "追加",
+    "addCredit": "＋クレジットを追加",
+    "save": "作品情報を保存",
+    "saving": "保存中…",
+    "close": "閉じる",
+    "reReviewNote": "作品情報やクレジットを変更した楽曲は、表示内容を確認するため再審査になります。",
+    "recordingTypes": {
+      "original": "オリジナル",
+      "cover": "カバー",
+      "remix": "リミックス",
+      "arrangement": "アレンジ／替え歌",
+      "medley": "メドレー",
+      "live": "ライブ／配信音源",
+      "instrumental": "インストゥルメンタル"
+    },
+    "contentCategories": {
+      "none": "一般楽曲",
+      "anime": "アニメ",
+      "game": "ゲーム",
+      "visual_novel": "ノベルゲーム",
+      "vtuber": "VTuber／配信者",
+      "virtual_character": "バーチャルキャラクター",
+      "voice_synth": "音声合成・ボーカロイド",
+      "other": "その他の二次元コンテンツ"
+    },
+    "rightsStatuses": {
+      "original": "自作・権利保有",
+      "permission_obtained": "必要な許諾を確認済み",
+      "public_domain": "パブリックドメイン"
+    },
+    "creditRoles": {
+      "featured_artist": "フィーチャリング",
+      "vocalist": "ボーカル",
+      "composer": "作曲",
+      "lyricist": "作詞",
+      "arranger": "編曲",
+      "producer": "プロデュース",
+      "remixer": "リミックス",
+      "illustrator": "イラスト",
+      "character": "キャラクター",
+      "voice_actor": "声優・演者",
+      "original_artist": "原アーティスト"
     }
   }
 }

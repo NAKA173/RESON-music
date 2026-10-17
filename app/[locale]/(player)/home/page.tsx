@@ -351,7 +351,7 @@ export default function PlayerPage() {
                           {t.title}
                         </p>
                         <p className="truncate text-xs text-[var(--dim)]">
-                          {formatTrackArtistLine(t.artists?.name, t.credits) || tr('unknownArtist')}
+                          {formatTrackArtistLine(t.artists?.name, t.credits, tr('unknownArtist'))}
                           {t.ai_generated && <span className="ml-2 text-yellow-500">AI</span>}
                         </p>
                       </div>

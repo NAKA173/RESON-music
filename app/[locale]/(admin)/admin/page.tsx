@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-<<<<<<< HEAD:app/[locale]/(admin)/admin/page.tsx
-import { TRACK_CREDIT_ROLE_LABELS, type TrackCredit } from '@/lib/music/credits'
-import { CONTENT_CATEGORY_LABELS, RECORDING_TYPE_LABELS, type ContentCategory, type RecordingType } from '@/lib/music/metadata'
+import type { TrackCredit } from '@/lib/music/credits'
+import type { ContentCategory, RecordingType } from '@/lib/music/metadata'
 import { Link } from '@/i18n/navigation'
 import { useFormatter, useTranslations } from 'next-intl'
 
@@ -75,6 +74,7 @@ interface ArtistSearchResult {
 
 export default function AdminPage() {
   const t = useTranslations('Admin')
+  const metadataT = useTranslations('MusicMetadata')
   const format = useFormatter()
   const [authState, setAuthState] = useState<'checking' | 'denied' | 'ok'>('checking')
   const [tab, setTab] = useState<Tab>('artists')
@@ -237,21 +237,21 @@ export default function AdminPage() {
                   </div>
                   <p className="text-sm text-zinc-400">{track.artists?.name ?? t('tracks.unknown')}</p>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-400">{RECORDING_TYPE_LABELS[track.recording_type] ?? track.recording_type}</span>
-                    {track.content_category !== 'none' && <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-yellow-300">{CONTENT_CATEGORY_LABELS[track.content_category] ?? track.content_category}</span>}
-                    <span className={track.rights_confirmed ? 'text-emerald-400' : 'text-red-400'}>{track.rights_confirmed ? '権利確認済み' : '権利確認なし'}</span>
+                    <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-400">{metadataT(`recordingTypes.${track.recording_type}`)}</span>
+                    {track.content_category !== 'none' && <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-yellow-300">{metadataT(`contentCategories.${track.content_category}`)}</span>}
+                    <span className={track.rights_confirmed ? 'text-emerald-400' : 'text-red-400'}>{track.rights_confirmed ? t('tracks.rightsConfirmed') : t('tracks.rightsNotConfirmed')}</span>
                   </div>
                   {(track.source_title || track.source_work_title || track.source_artist_name) && (
                     <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-400">
-                      <p>参照元：{track.source_title ?? '未入力'}{track.source_artist_name ? ` ／ ${track.source_artist_name}` : ''}</p>
-                      {track.source_work_title && <p className="mt-1">作品：{track.source_work_title}</p>}
+                      <p>{t('tracks.source')}: {track.source_title ?? t('tracks.notEntered')}{track.source_artist_name ? ` / ${track.source_artist_name}` : ''}</p>
+                      {track.source_work_title && <p className="mt-1">{t('tracks.work')}: {track.source_work_title}</p>}
                       {track.source_url && <p className="mt-1 break-all text-zinc-600">{track.source_url}</p>}
-                      {track.rights_note && <p className="mt-1">メモ：{track.rights_note}</p>}
+                      {track.rights_note && <p className="mt-1">{t('tracks.note')}: {track.rights_note}</p>}
                     </div>
                   )}
                   {track.credits.length > 0 && (
                     <p className="text-xs text-zinc-500">
-                      クレジット：{track.credits.map((credit) => `${TRACK_CREDIT_ROLE_LABELS[credit.role]} ${credit.display_name}`).join(' ／ ')}
+                      {t('tracks.credits')}: {track.credits.map((credit) => `${metadataT(`creditRoles.${credit.role}`)} ${credit.display_name}`).join(' / ')}
                     </p>
                   )}
                   <div className="flex gap-2">

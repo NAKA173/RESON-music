@@ -225,9 +225,8 @@ export function Player({ track, onEnded, nextTrackId, controls }: PlayerProps) {
       {/* トラック情報 */}
       <div>
         <p className="font-semibold truncate">{track.title}</p>
-<<<<<<< HEAD
         <p className="text-sm text-zinc-400">
-          {formatTrackArtistLine(track.artists?.name, track.credits) || t('unknownArtist')}
+          {formatTrackArtistLine(track.artists?.name, track.credits, t('unknownArtist'))}
         </p>
       </div>
 

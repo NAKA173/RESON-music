@@ -6,16 +6,13 @@ import { useTranslations } from 'next-intl'
 import { computeClientFingerprint } from '@/lib/audio/client-fingerprint'
 import {
   CONTENT_CATEGORIES,
-  CONTENT_CATEGORY_LABELS,
   RECORDING_TYPES,
-  RECORDING_TYPE_LABELS,
-  RIGHTS_STATUS_LABELS,
   RIGHTS_STATUSES,
   type ContentCategory,
   type RecordingType,
   type RightsStatus,
 } from '@/lib/music/metadata'
-import { TRACK_CREDIT_ROLE_LABELS, TRACK_CREDIT_ROLES, type TrackCreditRole } from '@/lib/music/credits'
+import { TRACK_CREDIT_ROLES, type TrackCreditRole } from '@/lib/music/credits'
 
 const ALLOWED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/flac', 'audio/wav', 'audio/ogg']
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -49,6 +46,7 @@ interface ArtistSuggestion {
 
 export default function UploadPage() {
   const t = useTranslations('Upload')
+  const metadataT = useTranslations('MusicMetadata')
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -253,7 +251,7 @@ export default function UploadPage() {
     if (!file) return
     setError('')
     if (!rightsConfirmed) {
-      setError('権利確認のチェックが必要です')
+      setError(metadataT('rightsRequired'))
       return
     }
     setLoading(true)
@@ -462,33 +460,33 @@ export default function UploadPage() {
           {/* 作品・クレジット情報 */}
           <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
             <div>
-              <h2 className="text-sm font-semibold">作品・クレジット情報</h2>
+              <h2 className="text-sm font-semibold">{metadataT('sectionTitle')}</h2>
               <p className="mt-1 text-xs leading-5 text-zinc-500">
-                feat. や原曲情報をタイトルへ直接書かず、検索・表示できるクレジットとして登録します。
+                {metadataT('sectionDescription')}
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label htmlFor="recording-type" className="block text-xs text-zinc-400 mb-1">楽曲の種類</label>
+                <label htmlFor="recording-type" className="block text-xs text-zinc-400 mb-1">{metadataT('recordingType')}</label>
                 <select
                   id="recording-type"
                   value={recordingType}
                   onChange={(e) => changeRecordingType(e.target.value as RecordingType)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
                 >
-                  {RECORDING_TYPES.map((type) => <option key={type} value={type}>{RECORDING_TYPE_LABELS[type]}</option>)}
+                  {RECORDING_TYPES.map((type) => <option key={type} value={type}>{metadataT(`recordingTypes.${type}`)}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="content-category" className="block text-xs text-zinc-400 mb-1">関連コンテンツ</label>
+                <label htmlFor="content-category" className="block text-xs text-zinc-400 mb-1">{metadataT('contentCategory')}</label>
                 <select
                   id="content-category"
                   value={contentCategory}
                   onChange={(e) => setContentCategory(e.target.value as ContentCategory)}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
                 >
-                  {CONTENT_CATEGORIES.map((category) => <option key={category} value={category}>{CONTENT_CATEGORY_LABELS[category]}</option>)}
+                  {CONTENT_CATEGORIES.map((category) => <option key={category} value={category}>{metadataT(`contentCategories.${category}`)}</option>)}
                 </select>
               </div>
             </div>
@@ -499,7 +497,7 @@ export default function UploadPage() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <label htmlFor="source-title" className="block text-xs text-zinc-400 mb-1">
-                        原曲・元作品名 {['cover', 'remix', 'arrangement', 'medley'].includes(recordingType) && <span className="text-red-400">*</span>}
+                        {metadataT('sourceTitle')} {['cover', 'remix', 'arrangement', 'medley'].includes(recordingType) && <span className="text-red-400">*</span>}
                       </label>
                       <input
                         id="source-title"
@@ -507,18 +505,18 @@ export default function UploadPage() {
                         onChange={(e) => setSourceTitle(e.target.value)}
                         maxLength={200}
                         required={['cover', 'remix', 'arrangement', 'medley'].includes(recordingType)}
-                        placeholder="例：楽曲名／原作タイトル"
+                        placeholder={metadataT('sourceTitlePlaceholder')}
                         className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
                       />
                     </div>
                     <div>
-                      <label htmlFor="source-artist-name" className="block text-xs text-zinc-400 mb-1">原アーティスト名（任意）</label>
+                      <label htmlFor="source-artist-name" className="block text-xs text-zinc-400 mb-1">{metadataT('sourceArtistName')}</label>
                       <input
                         id="source-artist-name"
                         value={sourceArtistName}
                         onChange={(e) => setSourceArtistName(e.target.value)}
                         maxLength={200}
-                        placeholder="例：原曲の作家・歌唱者"
+                        placeholder={metadataT('sourceArtistNamePlaceholder')}
                         className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
                       />
                     </div>
@@ -526,14 +524,14 @@ export default function UploadPage() {
                 )}
                 {contentCategory !== 'none' && (
                   <div>
-                    <label htmlFor="source-work-title" className="block text-xs text-zinc-400 mb-1">作品・コンテンツ名 <span className="text-red-400">*</span></label>
+                    <label htmlFor="source-work-title" className="block text-xs text-zinc-400 mb-1">{metadataT('sourceWorkTitle')} <span className="text-red-400">*</span></label>
                     <input
                       id="source-work-title"
                       value={sourceWorkTitle}
                       onChange={(e) => setSourceWorkTitle(e.target.value)}
                       maxLength={200}
                       required
-                      placeholder="例：作品名／ゲームタイトル／配信者名"
+                      placeholder={metadataT('sourceWorkTitlePlaceholder')}
                       className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
                     />
                   </div>
@@ -541,18 +539,18 @@ export default function UploadPage() {
                 {recordingType !== 'original' && (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="rights-status" className="block text-xs text-zinc-400 mb-1">権利状態</label>
+                      <label htmlFor="rights-status" className="block text-xs text-zinc-400 mb-1">{metadataT('rightsStatus')}</label>
                       <select
                         id="rights-status"
                         value={rightsStatus}
                         onChange={(e) => setRightsStatus(e.target.value as RightsStatus)}
                         className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
                       >
-                        {RIGHTS_STATUSES.filter((status) => status !== 'original').map((status) => <option key={status} value={status}>{RIGHTS_STATUS_LABELS[status]}</option>)}
+                        {RIGHTS_STATUSES.filter((status) => status !== 'original').map((status) => <option key={status} value={status}>{metadataT(`rightsStatuses.${status}`)}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="source-url" className="block text-xs text-zinc-400 mb-1">参照URL（任意）</label>
+                      <label htmlFor="source-url" className="block text-xs text-zinc-400 mb-1">{metadataT('sourceUrl')}</label>
                       <input
                         id="source-url"
                         type="url"
@@ -574,16 +572,16 @@ export default function UploadPage() {
                     className="mt-0.5 h-4 w-4 shrink-0 rounded accent-white"
                   />
                   <span className="text-xs leading-5 text-zinc-400">
-                    この音源を配信するために必要な権利・許諾を確認済みです。RESONは権利許諾を代行しません。
+                    {metadataT('rightsNotice')}
                   </span>
                 </label>
                 <textarea
-                  aria-label="権利確認メモ"
+                  aria-label={metadataT('rightsNote')}
                   value={rightsNote}
                   onChange={(e) => setRightsNote(e.target.value)}
                   maxLength={1000}
                   rows={2}
-                  placeholder="運営審査向けの補足（任意）"
+                  placeholder={metadataT('rightsNotePlaceholder')}
                   className="w-full resize-none bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
                 />
               </div>
@@ -598,15 +596,15 @@ export default function UploadPage() {
                   required
                   className="mt-0.5 h-4 w-4 shrink-0 rounded accent-white"
                 />
-                <span className="text-xs leading-5 text-zinc-400">自分または所属先が、この音源を配信するために必要な権利を保有していることを確認しました。</span>
+                <span className="text-xs leading-5 text-zinc-400">{metadataT('rightsConfirmedOriginal')}</span>
               </label>
             )}
 
             <div className="border-t border-zinc-800 pt-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-xs font-semibold text-zinc-300">参加者クレジット</h3>
-                  <p className="mt-1 text-[11px] text-zinc-600">feat.、ボーカル、作曲、イラストなどを登録できます。</p>
+                  <h3 className="text-xs font-semibold text-zinc-300">{metadataT('credits')}</h3>
+                  <p className="mt-1 text-[11px] text-zinc-600">{metadataT('creditsDescription')}</p>
                 </div>
                 <span className="text-[11px] text-zinc-600">{credits.length}/20</span>
               </div>
@@ -614,41 +612,41 @@ export default function UploadPage() {
                 <div className="mt-3 space-y-2">
                   {credits.map((credit, index) => (
                     <div key={`${credit.display_name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs">
-                      <span className="min-w-0 truncate"><span className="text-zinc-500">{TRACK_CREDIT_ROLE_LABELS[credit.role]}</span>　{credit.display_name}</span>
-                      <button type="button" onClick={() => setCredits((prev) => prev.filter((_, i) => i !== index))} className="shrink-0 text-zinc-500 underline hover:text-white">削除</button>
+                      <span className="min-w-0 truncate"><span className="text-zinc-500">{metadataT(`creditRoles.${credit.role}`)}</span>　{credit.display_name}</span>
+                      <button type="button" onClick={() => setCredits((prev) => prev.filter((_, i) => i !== index))} className="shrink-0 text-zinc-500 underline hover:text-white">{metadataT('remove')}</button>
                     </div>
                   ))}
                 </div>
               )}
               <div className="mt-3 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
                 <select
-                  aria-label="クレジットの役割"
+                  aria-label={metadataT('creditRole')}
                   value={creditRole}
                   onChange={(e) => setCreditRole(e.target.value as TrackCreditRole)}
                   className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-zinc-400"
                 >
-                  {TRACK_CREDIT_ROLES.map((role) => <option key={role} value={role}>{TRACK_CREDIT_ROLE_LABELS[role]}</option>)}
+                  {TRACK_CREDIT_ROLES.map((role) => <option key={role} value={role}>{metadataT(`creditRoles.${role}`)}</option>)}
                 </select>
                 <div className="relative">
                   <input
-                    aria-label="クレジット表示名"
+                    aria-label={metadataT('creditName')}
                     value={creditName}
                     onChange={(e) => { setCreditName(e.target.value); setCreditArtistId(null); setCreditSearch(e.target.value) }}
                     maxLength={100}
-                    placeholder="表示名（未登録の名前も可）"
+                    placeholder={metadataT('displayNamePlaceholder')}
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
                   />
                   {artistSuggestions.length > 0 && (
                     <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
                       {artistSuggestions.map((artist) => (
                         <button key={artist.id} type="button" onClick={() => selectCreditArtist(artist)} className="block w-full px-3 py-2 text-left text-xs hover:bg-zinc-800">
-                          {artist.name}<span className="ml-2 text-zinc-600">RESONアーティスト</span>
+                          {artist.name}<span className="ml-2 text-zinc-600">{metadataT('registeredArtist')}</span>
                         </button>
                       ))}
                     </div>
                   )}
                 </div>
-                <button type="button" onClick={addCredit} disabled={!creditName.trim() || credits.length >= 20} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs hover:border-zinc-400 disabled:opacity-40">追加</button>
+                <button type="button" onClick={addCredit} disabled={!creditName.trim() || credits.length >= 20} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs hover:border-zinc-400 disabled:opacity-40">{metadataT('add')}</button>
               </div>
             </div>
           </section>
