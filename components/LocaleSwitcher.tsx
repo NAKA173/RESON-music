@@ -18,16 +18,17 @@ export function LocaleSwitcher({
   const targetLocale: Locale = locale === "ja" ? "en" : "ja";
   const label =
     targetLocale === "en" ? t("switchToEnglish") : t("switchToJapanese");
+  const languageCode = targetLocale.toUpperCase();
 
   return (
     <Link
       href={href}
       locale={targetLocale}
-      aria-label={label}
+      aria-label={`${label} (${languageCode})`}
       title={label}
       className={className}
     >
-      {targetLocale.toUpperCase()}
+      {languageCode}
     </Link>
   );
 }
