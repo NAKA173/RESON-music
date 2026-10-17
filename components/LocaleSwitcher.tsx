@@ -24,11 +24,11 @@ export function LocaleSwitcher({
     <Link
       href={href}
       locale={targetLocale}
-      aria-label={`${label} (${languageCode})`}
       title={label}
       className={className}
     >
       {languageCode}
+      <span className="sr-only"> ({label})</span>
     </Link>
   );
 }
