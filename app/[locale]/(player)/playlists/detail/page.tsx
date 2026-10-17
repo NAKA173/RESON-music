@@ -6,6 +6,7 @@ import { Link, useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { Player } from '@/components/Player'
 import { usePlayerQueue } from '@/lib/player/queue'
+import { formatTrackArtistLine, type TrackCredit } from '@/lib/music/credits'
 
 interface PlaylistTrackRow {
   position: number
@@ -16,6 +17,7 @@ interface PlaylistTrackRow {
     duration_sec: number
     ai_generated: boolean
     artists: { id: string; name: string } | null
+    credits?: TrackCredit[]
   } | null
 }
 
@@ -200,7 +202,7 @@ function PlaylistDetailContent() {
                   <p className={`truncate text-sm font-medium ${i === currentIdx ? 'text-[var(--accent)]' : ''}`}>
                     {track.title}
                   </p>
-                  <p className="truncate text-xs text-[var(--dim)]">{track.artists?.name ?? t('unknownArtist')}</p>
+                  <p className="truncate text-xs text-[var(--dim)]">{formatTrackArtistLine(track.artists?.name, track.credits, t('unknownArtist'))}</p>
                 </button>
                 <button onClick={() => queue.addToQueue(track)} title={t('addQueueTitle')} className="text-xs text-[var(--faint)] hover:text-[var(--text)]">
                   {t('addQueue')}

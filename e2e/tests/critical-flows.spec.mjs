@@ -256,7 +256,7 @@ test.describe('critical mocked browser flows', () => {
     await page.getByPlaceholder('新しいアルバム名').fill('Phase 3 Album')
     await page.getByRole('button', { name: '作成' }).click()
 
-    await expect(page.locator('select').first()).toContainText('Phase 3 Album')
+    await expect(page.locator('#track-album')).toContainText('Phase 3 Album')
     expect(albumPayload).toEqual({ title: 'Phase 3 Album', release_type: 'album' })
   })
 
@@ -317,6 +317,7 @@ test.describe('critical mocked browser flows', () => {
     })
 
     await expect(page.locator('form input[type="text"]').first()).toHaveValue('phase3')
+    await page.locator('input[type="checkbox"][required]').check()
     await page.getByRole('button', { name: 'アップロード' }).click()
 
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 15_000 })

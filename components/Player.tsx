@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { BoostButton } from './BoostButton'
 import { SupportButton } from './SupportButton'
 import { SupportGraph } from './SupportGraph'
+import { formatTrackArtistLine, type TrackCredit } from '@/lib/music/credits'
 import type { RepeatMode } from '@/lib/player/queue'
 
 interface Track {
@@ -12,6 +13,7 @@ interface Track {
   title: string
   duration_sec: number
   artists: { name: string } | null
+  credits?: TrackCredit[]
 }
 
 interface PlayerControls {
@@ -223,7 +225,9 @@ export function Player({ track, onEnded, nextTrackId, controls }: PlayerProps) {
       {/* トラック情報 */}
       <div>
         <p className="font-semibold truncate">{track.title}</p>
-        <p className="text-sm text-zinc-400">{track.artists?.name ?? t('unknownArtist')}</p>
+        <p className="text-sm text-zinc-400">
+          {formatTrackArtistLine(track.artists?.name, track.credits, t('unknownArtist'))}
+        </p>
       </div>
 
       {/* シークバー */}

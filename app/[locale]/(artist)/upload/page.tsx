@@ -4,6 +4,15 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
 import { computeClientFingerprint } from '@/lib/audio/client-fingerprint'
+import {
+  CONTENT_CATEGORIES,
+  RECORDING_TYPES,
+  RIGHTS_STATUSES,
+  type ContentCategory,
+  type RecordingType,
+  type RightsStatus,
+} from '@/lib/music/metadata'
+import { TRACK_CREDIT_ROLES, type TrackCreditRole } from '@/lib/music/credits'
 
 const ALLOWED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/flac', 'audio/wav', 'audio/ogg']
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -24,8 +33,20 @@ interface Album {
   cover_r2_key: string | null
 }
 
+interface CreditDraft {
+  artist_id: string | null
+  display_name: string
+  role: TrackCreditRole
+}
+
+interface ArtistSuggestion {
+  id: string
+  name: string
+}
+
 export default function UploadPage() {
   const t = useTranslations('Upload')
+  const metadataT = useTranslations('MusicMetadata')
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -51,6 +72,21 @@ export default function UploadPage() {
   const [albumCoverDone, setAlbumCoverDone] = useState(false)
   const albumCoverInputRef = useRef<HTMLInputElement>(null)
   const [isrc, setIsrc] = useState('')
+  const [recordingType, setRecordingType] = useState<RecordingType>('original')
+  const [contentCategory, setContentCategory] = useState<ContentCategory>('none')
+  const [sourceTitle, setSourceTitle] = useState('')
+  const [sourceArtistName, setSourceArtistName] = useState('')
+  const [sourceWorkTitle, setSourceWorkTitle] = useState('')
+  const [sourceUrl, setSourceUrl] = useState('')
+  const [rightsStatus, setRightsStatus] = useState<RightsStatus>('original')
+  const [rightsConfirmed, setRightsConfirmed] = useState(false)
+  const [rightsNote, setRightsNote] = useState('')
+  const [credits, setCredits] = useState<CreditDraft[]>([])
+  const [creditName, setCreditName] = useState('')
+  const [creditRole, setCreditRole] = useState<TrackCreditRole>('featured_artist')
+  const [creditArtistId, setCreditArtistId] = useState<string | null>(null)
+  const [creditSearch, setCreditSearch] = useState('')
+  const [artistSuggestions, setArtistSuggestions] = useState<ArtistSuggestion[]>([])
 
   useEffect(() => {
     fetch('/api/genres')
@@ -58,6 +94,20 @@ export default function UploadPage() {
       .then((d) => setGenres(d.genres ?? []))
     loadAlbums()
   }, [])
+
+  useEffect(() => {
+    const query = creditSearch.trim()
+    if (query.length < 2) {
+      setArtistSuggestions([])
+      return
+    }
+    const timer = setTimeout(() => {
+      fetch(`/api/artists/search?q=${encodeURIComponent(query)}`)
+        .then((r) => (r.ok ? r.json() : { artists: [] }))
+        .then((d) => setArtistSuggestions(d.artists ?? []))
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [creditSearch])
 
   function loadAlbums() {
     fetch('/api/albums?mine=true')
@@ -88,6 +138,31 @@ export default function UploadPage() {
       if (prev.length >= MAX_GENRES) return prev
       return [...prev, id]
     })
+  }
+
+  function changeRecordingType(next: RecordingType) {
+    setRecordingType(next)
+    if (next === 'original') {
+      setRightsStatus('original')
+    } else if (rightsStatus === 'original') {
+      setRightsStatus('permission_obtained')
+    }
+  }
+
+  function selectCreditArtist(artist: ArtistSuggestion) {
+    setCreditName(artist.name)
+    setCreditArtistId(artist.id)
+    setCreditSearch('')
+    setArtistSuggestions([])
+  }
+
+  function addCredit() {
+    const displayName = creditName.trim()
+    if (!displayName || credits.length >= 20) return
+    setCredits((prev) => [...prev, { artist_id: creditArtistId, display_name: displayName, role: creditRole }])
+    setCreditName('')
+    setCreditArtistId(null)
+    setCreditSearch('')
   }
 
   const macroGenres = genres.filter((g) => !g.parent_id)
@@ -175,6 +250,10 @@ export default function UploadPage() {
     e.preventDefault()
     if (!file) return
     setError('')
+    if (!rightsConfirmed) {
+      setError(metadataT('rightsRequired'))
+      return
+    }
     setLoading(true)
     setProgress(0)
 
@@ -199,6 +278,16 @@ export default function UploadPage() {
         album_id: albumId || undefined,
         track_number: albumId && trackNumber ? Number(trackNumber) : undefined,
         isrc: isrc || undefined,
+        credits,
+        recording_type: recordingType,
+        content_category: contentCategory,
+        source_title: sourceTitle,
+        source_artist_name: sourceArtistName,
+        source_work_title: sourceWorkTitle,
+        source_url: sourceUrl,
+        rights_status: rightsStatus,
+        rights_confirmed: rightsConfirmed,
+        rights_note: rightsNote,
       }),
     })
     const meta = await metaRes.json()
@@ -367,6 +456,200 @@ export default function UploadPage() {
               className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
             />
           </div>
+
+          {/* 作品・クレジット情報 */}
+          <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4">
+            <div>
+              <h2 className="text-sm font-semibold">{metadataT('sectionTitle')}</h2>
+              <p className="mt-1 text-xs leading-5 text-zinc-500">
+                {metadataT('sectionDescription')}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="recording-type" className="block text-xs text-zinc-400 mb-1">{metadataT('recordingType')}</label>
+                <select
+                  id="recording-type"
+                  value={recordingType}
+                  onChange={(e) => changeRecordingType(e.target.value as RecordingType)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
+                >
+                  {RECORDING_TYPES.map((type) => <option key={type} value={type}>{metadataT(`recordingTypes.${type}`)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="content-category" className="block text-xs text-zinc-400 mb-1">{metadataT('contentCategory')}</label>
+                <select
+                  id="content-category"
+                  value={contentCategory}
+                  onChange={(e) => setContentCategory(e.target.value as ContentCategory)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
+                >
+                  {CONTENT_CATEGORIES.map((category) => <option key={category} value={category}>{metadataT(`contentCategories.${category}`)}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {(recordingType !== 'original' || contentCategory !== 'none') && (
+              <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                {recordingType !== 'original' && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="source-title" className="block text-xs text-zinc-400 mb-1">
+                        {metadataT('sourceTitle')} {['cover', 'remix', 'arrangement', 'medley'].includes(recordingType) && <span className="text-red-400">*</span>}
+                      </label>
+                      <input
+                        id="source-title"
+                        value={sourceTitle}
+                        onChange={(e) => setSourceTitle(e.target.value)}
+                        maxLength={200}
+                        required={['cover', 'remix', 'arrangement', 'medley'].includes(recordingType)}
+                        placeholder={metadataT('sourceTitlePlaceholder')}
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="source-artist-name" className="block text-xs text-zinc-400 mb-1">{metadataT('sourceArtistName')}</label>
+                      <input
+                        id="source-artist-name"
+                        value={sourceArtistName}
+                        onChange={(e) => setSourceArtistName(e.target.value)}
+                        maxLength={200}
+                        placeholder={metadataT('sourceArtistNamePlaceholder')}
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                      />
+                    </div>
+                  </div>
+                )}
+                {contentCategory !== 'none' && (
+                  <div>
+                    <label htmlFor="source-work-title" className="block text-xs text-zinc-400 mb-1">{metadataT('sourceWorkTitle')} <span className="text-red-400">*</span></label>
+                    <input
+                      id="source-work-title"
+                      value={sourceWorkTitle}
+                      onChange={(e) => setSourceWorkTitle(e.target.value)}
+                      maxLength={200}
+                      required
+                      placeholder={metadataT('sourceWorkTitlePlaceholder')}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                    />
+                  </div>
+                )}
+                {recordingType !== 'original' && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="rights-status" className="block text-xs text-zinc-400 mb-1">{metadataT('rightsStatus')}</label>
+                      <select
+                        id="rights-status"
+                        value={rightsStatus}
+                        onChange={(e) => setRightsStatus(e.target.value as RightsStatus)}
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-400"
+                      >
+                        {RIGHTS_STATUSES.filter((status) => status !== 'original').map((status) => <option key={status} value={status}>{metadataT(`rightsStatuses.${status}`)}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="source-url" className="block text-xs text-zinc-400 mb-1">{metadataT('sourceUrl')}</label>
+                      <input
+                        id="source-url"
+                        type="url"
+                        value={sourceUrl}
+                        onChange={(e) => setSourceUrl(e.target.value)}
+                        maxLength={500}
+                        placeholder="https://…"
+                        className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                      />
+                    </div>
+                  </div>
+                )}
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rightsConfirmed}
+                    onChange={(e) => setRightsConfirmed(e.target.checked)}
+                    required
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded accent-white"
+                  />
+                  <span className="text-xs leading-5 text-zinc-400">
+                    {metadataT('rightsNotice')}
+                  </span>
+                </label>
+                <textarea
+                  aria-label={metadataT('rightsNote')}
+                  value={rightsNote}
+                  onChange={(e) => setRightsNote(e.target.value)}
+                  maxLength={1000}
+                  rows={2}
+                  placeholder={metadataT('rightsNotePlaceholder')}
+                  className="w-full resize-none bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                />
+              </div>
+            )}
+
+            {recordingType === 'original' && (
+              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                <input
+                  type="checkbox"
+                  checked={rightsConfirmed}
+                  onChange={(e) => setRightsConfirmed(e.target.checked)}
+                  required
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded accent-white"
+                />
+                <span className="text-xs leading-5 text-zinc-400">{metadataT('rightsConfirmedOriginal')}</span>
+              </label>
+            )}
+
+            <div className="border-t border-zinc-800 pt-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-semibold text-zinc-300">{metadataT('credits')}</h3>
+                  <p className="mt-1 text-[11px] text-zinc-600">{metadataT('creditsDescription')}</p>
+                </div>
+                <span className="text-[11px] text-zinc-600">{credits.length}/20</span>
+              </div>
+              {credits.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {credits.map((credit, index) => (
+                    <div key={`${credit.display_name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs">
+                      <span className="min-w-0 truncate"><span className="text-zinc-500">{metadataT(`creditRoles.${credit.role}`)}</span>　{credit.display_name}</span>
+                      <button type="button" onClick={() => setCredits((prev) => prev.filter((_, i) => i !== index))} className="shrink-0 text-zinc-500 underline hover:text-white">{metadataT('remove')}</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 grid gap-2 sm:grid-cols-[auto_1fr_auto]">
+                <select
+                  aria-label={metadataT('creditRole')}
+                  value={creditRole}
+                  onChange={(e) => setCreditRole(e.target.value as TrackCreditRole)}
+                  className="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-zinc-400"
+                >
+                  {TRACK_CREDIT_ROLES.map((role) => <option key={role} value={role}>{metadataT(`creditRoles.${role}`)}</option>)}
+                </select>
+                <div className="relative">
+                  <input
+                    aria-label={metadataT('creditName')}
+                    value={creditName}
+                    onChange={(e) => { setCreditName(e.target.value); setCreditArtistId(null); setCreditSearch(e.target.value) }}
+                    maxLength={100}
+                    placeholder={metadataT('displayNamePlaceholder')}
+                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-400"
+                  />
+                  {artistSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+                      {artistSuggestions.map((artist) => (
+                        <button key={artist.id} type="button" onClick={() => selectCreditArtist(artist)} className="block w-full px-3 py-2 text-left text-xs hover:bg-zinc-800">
+                          {artist.name}<span className="ml-2 text-zinc-600">{metadataT('registeredArtist')}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button type="button" onClick={addCredit} disabled={!creditName.trim() || credits.length >= 20} className="rounded-lg border border-zinc-700 px-3 py-2 text-xs hover:border-zinc-400 disabled:opacity-40">{metadataT('add')}</button>
+              </div>
+            </div>
+          </section>
 
           {/* ISRC */}
           <div>

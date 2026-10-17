@@ -6,6 +6,7 @@ import { usePlayerQueue } from '@/lib/player/queue'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Link } from '@/i18n/navigation'
 import { useTranslations } from 'next-intl'
+import { formatTrackArtistLine, type TrackCredit } from '@/lib/music/credits'
 
 interface Track {
   id: string
@@ -14,6 +15,7 @@ interface Track {
   ai_generated: boolean
   cumulative_plays: number
   artists: { id: string; name: string } | null
+  credits?: TrackCredit[]
 }
 
 interface HeatTrack extends Track {
@@ -349,7 +351,7 @@ export default function PlayerPage() {
                           {t.title}
                         </p>
                         <p className="truncate text-xs text-[var(--dim)]">
-                          {t.artists?.name ?? tr('unknownArtist')}
+                          {formatTrackArtistLine(t.artists?.name, t.credits, tr('unknownArtist'))}
                           {t.ai_generated && <span className="ml-2 text-yellow-500">AI</span>}
                         </p>
                       </div>

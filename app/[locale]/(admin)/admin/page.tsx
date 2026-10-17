@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { TrackCredit } from '@/lib/music/credits'
+import type { ContentCategory, RecordingType } from '@/lib/music/metadata'
 import { Link } from '@/i18n/navigation'
 import { useFormatter, useTranslations } from 'next-intl'
 
@@ -20,6 +22,16 @@ interface PendingTrack {
   ai_generated: boolean
   created_at: string
   artists: { id: string; name: string } | null
+  recording_type: RecordingType
+  content_category: ContentCategory
+  source_title: string | null
+  source_artist_name: string | null
+  source_work_title: string | null
+  source_url: string | null
+  rights_status: string
+  rights_confirmed: boolean
+  rights_note: string | null
+  credits: TrackCredit[]
 }
 
 interface FraudFlag {
@@ -62,6 +74,7 @@ interface ArtistSearchResult {
 
 export default function AdminPage() {
   const t = useTranslations('Admin')
+  const metadataT = useTranslations('MusicMetadata')
   const format = useFormatter()
   const [authState, setAuthState] = useState<'checking' | 'denied' | 'ok'>('checking')
   const [tab, setTab] = useState<Tab>('artists')
@@ -223,6 +236,24 @@ export default function AdminPage() {
                     <p className="text-xs text-zinc-500">{format.dateTime(new Date(track.created_at), { year: 'numeric', month: 'short', day: 'numeric' })}</p>
                   </div>
                   <p className="text-sm text-zinc-400">{track.artists?.name ?? t('tracks.unknown')}</p>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-400">{metadataT(`recordingTypes.${track.recording_type}`)}</span>
+                    {track.content_category !== 'none' && <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-yellow-300">{metadataT(`contentCategories.${track.content_category}`)}</span>}
+                    <span className={track.rights_confirmed ? 'text-emerald-400' : 'text-red-400'}>{track.rights_confirmed ? t('tracks.rightsConfirmed') : t('tracks.rightsNotConfirmed')}</span>
+                  </div>
+                  {(track.source_title || track.source_work_title || track.source_artist_name) && (
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-400">
+                      <p>{t('tracks.source')}: {track.source_title ?? t('tracks.notEntered')}{track.source_artist_name ? ` / ${track.source_artist_name}` : ''}</p>
+                      {track.source_work_title && <p className="mt-1">{t('tracks.work')}: {track.source_work_title}</p>}
+                      {track.source_url && <p className="mt-1 break-all text-zinc-600">{track.source_url}</p>}
+                      {track.rights_note && <p className="mt-1">{t('tracks.note')}: {track.rights_note}</p>}
+                    </div>
+                  )}
+                  {track.credits.length > 0 && (
+                    <p className="text-xs text-zinc-500">
+                      {t('tracks.credits')}: {track.credits.map((credit) => `${metadataT(`creditRoles.${credit.role}`)} ${credit.display_name}`).join(' / ')}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <button onClick={() => reviewTrack(track.id, 'approved')} className="text-xs bg-white text-black px-3 py-1.5 rounded-lg font-semibold">{t('tracks.approve')}</button>
                     <button onClick={() => reviewTrack(track.id, 'rejected')} className="text-xs border border-red-800 text-red-400 px-3 py-1.5 rounded-lg">{t('tracks.reject')}</button>
