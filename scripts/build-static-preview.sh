@@ -24,14 +24,14 @@ if [ -f 'app/[locale]/privacy/page.tsx' ]; then
   sed -i "/export const dynamic = 'force-dynamic'/d" 'app/[locale]/privacy/page.tsx'
 fi
 
+# Next.js 16.4 Turbopack can fail during this second, static-export build.
+# Use the supported Webpack builder for the disposable GitHub Pages preview.
 STATIC_PREVIEW=true \
 STRIPE_SECRET_KEY="${STRIPE_SECRET_KEY:-sk_test_placeholder}" \
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-placeholder}" \
 NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-https://placeholder.supabase.co}" \
 NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-placeholder}" \
 SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-placeholder}" \
-# Next.js 16.4 Turbopack can fail during this second, static-export build.
-# Use the supported Webpack builder for the disposable GitHub Pages preview.
 npx next build --webpack
 
 # next-intl renders /ja and /en during static export. Production middleware
